@@ -3,3 +3,4 @@ dist/
 # Respaldos con aretes oficiales: no subir al repositorio público
 respaldo-*.json
 ganado-respaldo-*.json
+ganado-copia-*.txt
