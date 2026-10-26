@@ -1,0 +1,31 @@
+:root{--bg:#f6f4ef;--card:#fff;--fg:#222;--mut:#666;--line:#ddd;--acc:#2f6f3e;--warn:#b5651d;--bad:#a33}
+@media (prefers-color-scheme:dark){:root{--bg:#161815;--card:#22251f;--fg:#eee;--mut:#9a9a9a;--line:#3a3d36;--acc:#6fbf7f;--warn:#e0a060;--bad:#e07070}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:19px/1.45 system-ui,sans-serif}
+header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:#2f6f3e;color:#fff}
+header h1{font-size:1.3rem;margin:0;flex:1}
+main{max-width:760px;margin:auto;padding:16px}
+button,input,select,textarea{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;min-height:52px}
+button.grande{display:block;width:100%;text-align:left;font-size:1.15em;font-weight:600;margin:10px 0;padding:18px}
+table{border-collapse:collapse;width:100%;margin:6px 0}
+td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+#reporte h2{font-size:1.25rem}
+#reporte{overflow-x:auto}
+@media print{header,.noprint{display:none!important}body{background:#fff;color:#000;font-size:12pt}#reporte{border:0}main{max-width:none;padding:0}}
+button{cursor:pointer}
+button.pri{background:#2f6f3e;color:#fff;border:0}
+header button{background:#ffffff22;color:#fff;border:1px solid #ffffff55}
+input,select,textarea{width:100%}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1 1 140px}
+.item{display:flex;justify-content:space-between;gap:8px;cursor:pointer}
+.mut{color:var(--mut);font-size:.9em}
+.tag{font-size:.8em;padding:2px 8px;border-radius:99px;border:1px solid var(--line)}
+.warn{color:var(--warn)}.bad{color:var(--bad)}
+label{display:block;font-size:.9em;color:var(--mut);margin-top:6px}
+h2{font-size:1.1rem;margin:16px 0 4px}
+ul{list-style:none;padding:0;margin:0}
+li.ev{padding:8px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.hide{display:none}
+.row>input[type=search]{flex-basis:100%}

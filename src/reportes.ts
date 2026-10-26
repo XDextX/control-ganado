@@ -1,0 +1,112 @@
+// Cada reporte es un objeto simple que se pinta igual en pantalla, en PDF (imprimir) y en imagen (WhatsApp).
+import { Animal, Db, EVENTOS, MOTIVOS, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, prenezAbierta, retiro } from './datos';
+
+export interface Seccion { titulo: string; nota: string; cols: string[]; filas: string[][] }
+export interface Reporte { titulo: string; sub: string; secciones: Seccion[] }
+export type TipoReporte = 'inventario' | 'partos' | 'salidas' | 'ficha';
+
+const activos = (db: Db) => Object.values(db.animales).filter(a => !retiro(a)).sort(porArete);
+const contar = (lista: Animal[]) => {
+  const c: Record<string, number> = {};
+  for (const a of lista) c[a.categoria || 'Sin categoría'] = (c[a.categoria || 'Sin categoría'] || 0) + 1;
+  return Object.entries(c).map(([k, n]) => `${n} ${k}`).join(' · ');
+};
+
+export function inventario(db: Db): Reporte {
+  const porFinca: Record<string, Animal[]> = {};
+  for (const a of activos(db)) (porFinca[a.finca || 'Sin finca'] ??= []).push(a);
+  const total = Object.values(porFinca).flat().length;
+  return {
+    titulo: 'Animales por finca', sub: `${total} animales activos · ${fmt(hoy())}`,
+    secciones: Object.keys(porFinca).sort().map(f => ({
+      titulo: `${f} — ${porFinca[f].length} animales`, nota: contar(porFinca[f]),
+      cols: ['Arete', 'Categoría', 'Raza', 'Edad'], filas: porFinca[f].map(a => [nombreA(a), a.categoria, a.raza, edad(a.nac)]),
+    })),
+  };
+}
+
+export function partos(db: Db): Reporte {
+  const filas = activos(db).map(a => ({ a, p: prenezAbierta(a) })).filter(x => x.p).sort((x, y) => x.p!.parto.localeCompare(y.p!.parto))
+    .map(({ a, p }) => {
+      const d = diasHasta(p!.parto);
+      return [nombreA(a), a.finca, fmt(p!.parto), p!.secado ? fmt(p!.secado) : '—', d < 0 ? `Pasó hace ${-d} días` : `Faltan ${d} días`];
+    });
+  return {
+    titulo: 'Próximos partos y secados', sub: `${filas.length} vacas preñadas · ${fmt(hoy())}`,
+    secciones: [{
+      titulo: '', nota: filas.length ? 'Parto = monta + 283 días. Secar 60 días antes (solo leche).' : 'No hay vacas preñadas anotadas.',
+      cols: ['Animal', 'Finca', 'Parto', 'Secar', 'Cuándo'], filas,
+    }],
+  };
+}
+
+export function salidas(db: Db, mes: string): Reporte {
+  const sal = Object.values(db.animales).map(a => ({ a, r: retiro(a)! })).filter(x => x.r && x.r.fecha.startsWith(mes))
+    .sort((x, y) => x.r.fecha.localeCompare(y.r.fecha));
+  const nombreMes = new Date(mes + '-15T12:00:00Z').toLocaleDateString('es', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return {
+    titulo: 'Salidas de ' + nombreMes, sub: `${sal.length} animales salieron`,
+    secciones: [{
+      titulo: '', nota: sal.length ? MOTIVOS.map(m => `${sal.filter(x => x.r.motivo === m).length} ${m}`).join(' · ') : 'Ningún animal salió este mes.',
+      cols: ['Fecha', 'Animal', 'Finca', 'Motivo', 'Nota'], filas: sal.map(({ a, r }) => [fmt(r.fecha), nombreA(a), a.finca, r.motivo ?? '', r.nota]),
+    }],
+  };
+}
+
+export function ficha(a: Animal): Reporte {
+  const p = prenezAbierta(a), r = retiro(a);
+  const estado = r ? `Retirado: ${r.motivo} el ${fmt(r.fecha)}` : p ? `Preñada · parto ${fmt(p.parto)}` + (p.secado ? ` · secar ${fmt(p.secado)}` : '') : 'Activo';
+  const datos = [['Arete', a.arete], ['Nombre', a.nombre], ['Finca', a.finca], ['Tipo', a.tipo === 'leche' ? 'Leche' : 'Carne'],
+    ['Sexo', a.sexo === 'M' ? 'Macho' : 'Hembra'], ['Raza', a.raza], ['Categoría', a.categoria],
+    ['Nacimiento', a.nac ? `${fmt(a.nac)} (${edad(a.nac)})` : ''], ['Estado', estado], ['Notas', a.notas]].filter(x => x[1]);
+  return {
+    titulo: 'Ficha del animal ' + nombreA(a), sub: fmt(hoy()),
+    secciones: [
+      { titulo: 'Datos', nota: '', cols: [], filas: datos },
+      { titulo: 'Historial', nota: a.eventos.length ? '' : 'Sin eventos.', cols: ['Fecha', 'Evento', 'Nota'],
+        filas: ordenados(a).reverse().map(e => [fmt(e.fecha), EVENTOS[e.tipo] + (e.motivo ? ' · ' + e.motivo : ''), e.nota]) },
+    ],
+  };
+}
+
+// Dibuja el reporte como imagen. Columnas con ancho según su texto; las de la derecha se recortan con "…" si no caben.
+export function reporteAImagen(r: Reporte): HTMLCanvasElement {
+  const W = 1080, P = 48, LH = 46, c = document.createElement('canvas'), x = c.getContext('2d')!;
+  const F = (peso: number, tam: number) => `${peso} ${tam}px system-ui, sans-serif`;
+  const corta = (t: string, max: number) => {
+    if (x.measureText(t).width <= max) return t;
+    while (t && x.measureText(t + '…').width > max) t = t.slice(0, -1);
+    return t + '…';
+  };
+  const pasos: (() => void)[] = []; // primero se mide la altura total, luego se dibuja
+  pasos.push(() => {
+    x.fillStyle = '#2f6f3e'; x.fillRect(0, 0, W, 150);
+    x.fillStyle = '#fff'; x.font = F(700, 50); x.fillText(corta('🐄 ' + r.titulo, W - 2 * P), P, 80);
+    x.font = F(400, 30); x.fillText(r.sub, P, 125);
+  });
+  let y = 200;
+  for (const s of r.secciones) {
+    if (s.titulo) { const yy = y; pasos.push(() => { x.fillStyle = '#2f6f3e'; x.font = F(700, 38); x.fillText(corta(s.titulo, W - 2 * P), P, yy) }); y += 56 }
+    if (s.nota) { const yy = y; pasos.push(() => { x.fillStyle = '#333'; x.font = F(400, 30); x.fillText(corta(s.nota, W - 2 * P), P, yy) }); y += 50 }
+    if (!s.filas.length) continue;
+    x.font = F(400, 30);
+    const filas = s.cols.length ? [s.cols, ...s.filas] : s.filas;
+    const n = filas[0].length, anchos = Array.from({ length: n }, (_, i) => Math.max(...filas.map(f => x.measureText(f[i] ?? '').width)) + 28);
+    let sobra = W - 2 * P - anchos.reduce((a, b) => a + b, 0);
+    for (let i = n - 1; sobra < 0 && i > 0; i--) { const quita = Math.min(-sobra, anchos[i] - 120); if (quita > 0) { anchos[i] -= quita; sobra += quita } }
+    filas.forEach((f, k) => {
+      const yy = y, cab = s.cols.length > 0 && k === 0;
+      pasos.push(() => {
+        if (k % 2 === (s.cols.length ? 1 : 0)) { x.fillStyle = '#eef6ef'; x.fillRect(P - 10, yy - 34, W - 2 * P + 20, LH) }
+        let xx = P;
+        f.forEach((t, i) => { x.fillStyle = '#111'; x.font = F(cab || (!s.cols.length && i === 0) ? 700 : 400, 30); x.fillText(corta(t ?? '', anchos[i] - 20), xx, yy); xx += anchos[i] });
+      });
+      y += LH;
+    });
+    y += 30;
+  }
+  c.width = W; c.height = y + 20;
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, c.height);
+  pasos.forEach(p => p());
+  return c;
+}
