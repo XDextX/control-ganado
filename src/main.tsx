@@ -28,6 +28,14 @@ function descargar(blob: Blob, nombre: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// Abre el menú de compartir del teléfono (donde aparece WhatsApp); en la computadora, descarga el archivo.
+const puedeCompartir = (f: File) => !!navigator.canShare?.({ files: [f] });
+async function compartir(file: File, titulo: string): Promise<'compartido' | 'cancelado' | 'descargado'> {
+  if (!puedeCompartir(file)) { descargar(file, file.name); return 'descargado' }
+  try { await navigator.share({ files: [file], title: titulo }); return 'compartido' }
+  catch { return 'cancelado' }
+}
+
 // Mensaje grande que confirma que algo quedó guardado.
 function avisar(texto: string) {
   const el = <div class="aviso-ok" role="status">{texto}</div> as HTMLElement;
@@ -55,10 +63,15 @@ function Encabezado() {
 }
 
 // ---------- Copia de seguridad ----------
-function guardarCopia() {
-  descargar(new Blob([JSON.stringify(db, null, 1)], { type: 'application/json' }), `ganado-respaldo-${hoy()}.json`);
+// Como texto (.txt): Chrome en Android no deja compartir archivos .json, pero sí .txt. El contenido es el mismo.
+const archivoCopia = () => new File([JSON.stringify(db, null, 1)], `ganado-copia-${hoy()}.txt`, { type: 'text/plain' });
+const textoCopia = (cuando = '') => puedeCompartir(archivoCopia()) ? `📲 Enviar una copia ${cuando} (WhatsApp)` : `💾 Guardar una copia ${cuando}`;
+
+async function guardarCopia() {
+  const r = await compartir(archivoCopia(), 'Copia de Registro de Ganado');
+  if (r === 'cancelado') return;
   marcarRespaldo(); render();
-  avisar('✅ Copia guardada en Descargas');
+  avisar(r === 'compartido' ? '✅ Copia enviada' : '✅ Copia guardada en Descargas');
 }
 
 function CopiaSeguridad() {
@@ -67,7 +80,7 @@ function CopiaSeguridad() {
     if (!file) return;
     try {
       const n = fusionar(db, JSON.parse(await file.text()));
-      guardar(db); volver(); alert(`Copia recuperada.\n\nSe agregaron ${n.animales} animales nuevos y ${n.eventos} eventos nuevos. No se borró nada.`);
+      guardar(db); volver(); alert(`Copia recuperada.\n\nSe agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}. No se borró nada.`);
     } catch (err) { alert('Ese archivo no es una copia de esta app.\n\n' + (err as Error).message) }
   };
   let archivo!: HTMLInputElement;
@@ -75,9 +88,9 @@ function CopiaSeguridad() {
     <details open={!Object.keys(db.animales).length}>
       <summary>⚙️ Copia de seguridad</summary>
       <p class="ayuda">Guarde una copia seguido para no perder sus datos si se daña o cambia de teléfono. También sirve para pasar todos los animales a otro teléfono por WhatsApp.</p>
-      <button class="grande" onClick={guardarCopia}>💾 Guardar una copia</button>
+      <button class="grande" onClick={guardarCopia}>{textoCopia()}</button>
       <button class="grande" onClick={() => archivo.click()}>📂 Recuperar una copia</button>
-      <input ref={(el: HTMLInputElement) => (archivo = el)} type="file" accept=".json,application/json" class="hide" onChange={recuperar} />
+      <input ref={(el: HTMLInputElement) => (archivo = el)} type="file" accept=".json,.txt,application/json,text/plain" class="hide" onChange={recuperar} />
     </details>
   );
 }
@@ -99,7 +112,7 @@ function EliminarDatos() {
       <summary>🗑️ Eliminar datos</summary>
       <p><b>⚠️ Cuidado: esto borra información para siempre y no se puede deshacer.</b></p>
       <p class="ayuda">Antes de borrar, guarde una copia por si la necesita después.</p>
-      <button class="grande" onClick={guardarCopia}>💾 Guardar una copia primero</button>
+      <button class="grande" onClick={guardarCopia}>{textoCopia('primero')}</button>
       <p class="ayuda">Para borrar un solo animal, ábralo y use “🗑️ Eliminar este animal” al final de su ficha.</p>
       <button class="grande peligro" onClick={borrarTodo}>🗑️ Borrar TODOS los datos de este teléfono</button>
     </details>
@@ -120,7 +133,7 @@ function AvisoRespaldo() {
   return (
     <div class="card warn">
       💾 {d === null ? 'Todavía no ha guardado una copia de sus datos.' : `Su última copia es de hace ${d} días.`}
-      <button class="grande" onClick={guardarCopia}>💾 Guardar una copia ahora</button>
+      <button class="grande" onClick={guardarCopia}>{textoCopia('ahora')}</button>
     </div>
   );
 }
@@ -447,12 +460,7 @@ function VerReporte() {
   const r = armar();
   const enviarFoto = () => reporteAImagen(r).toBlob(async blob => {
     const file = new File([blob!], `reporte-${repTipo}-${hoy()}.png`, { type: 'image/png' });
-    if (navigator.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: r.titulo }) } catch { /* el usuario canceló */ }
-    } else {
-      descargar(blob!, file.name);
-      alert('Se descargó la imagen del reporte. Puede enviarla por WhatsApp desde sus descargas.');
-    }
+    if (await compartir(file, r.titulo) === 'descargado') alert('Se descargó la imagen del reporte. Puede enviarla por WhatsApp desde sus descargas.');
   }, 'image/png');
   return (
     <section>
