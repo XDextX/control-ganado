@@ -1,13 +1,13 @@
 import { h, Fragment } from './jsx';
 import './estilos.css';
 import {
-  Animal, CAMPOS, CATEGORIAS, cuantos, EVENTOS, MOTIVOS, TipoEvento, alertas, cargar, diasHasta, fincas, fmt, fusionar, guardar,
+  Animal, CAMPOS, CATEGORIAS, KEY, cambiosDesde, cuantos, sumarDias, EVENTOS, MOTIVOS, TipoEvento, alertas, cargar, diasHasta, fincas, fmt, fusionar, guardar,
   hoy, marcarRespaldo, nuevoId, ordenados, porArete, prenezAbierta, retiro, ultimoRespaldo,
 } from './datos';
 import { Reporte, TipoReporte, ficha, inventario, partos, reporteAImagen, salidas } from './reportes';
-import { Escaner, ImagenQr, detenerCamara, interpretar, qrDeAnimal } from './qr';
+import { Escaner, ImagenQr, detenerCamara, interpretar, qrDeAnimal, qrDeDatos } from './qr';
 
-type Vista = 'lista' | 'reportes' | 'reporte' | 'animal' | 'qr' | 'escaner';
+type Vista = 'lista' | 'reportes' | 'reporte' | 'animal' | 'qr' | 'escaner' | 'cambios';
 let db = cargar();
 let vista: Vista = 'lista', anterior: Vista = 'lista';
 let actual: Animal | null = null;
@@ -16,7 +16,7 @@ let repTipo: TipoReporte = 'inventario', mes = hoy().slice(0, 7);
 let qrModo: 'animal' | 'corral' = 'animal', areteNuevo = '';
 
 const raiz = document.getElementById('app')!;
-const VISTAS = { lista: Lista, reportes: MenuReportes, reporte: VerReporte, animal: Ficha, qr: VerQr, escaner: VerEscaner };
+const VISTAS = { lista: Lista, reportes: MenuReportes, reporte: VerReporte, animal: Ficha, qr: VerQr, escaner: VerEscaner, cambios: VerCambios };
 function render() { raiz.replaceChildren(<Encabezado />, <main>{VISTAS[vista]()}</main>) }
 function ir(v: Vista) { detenerCamara(); if (v !== vista) anterior = vista; vista = v; render(); scrollTo(0, 0) }
 function abrir(arete: string | null) { actual = arete ? db.animales[arete] : null; ir('animal') }
@@ -80,6 +80,36 @@ function CopiaSeguridad() {
       <input ref={(el: HTMLInputElement) => (archivo = el)} type="file" accept=".json,application/json" class="hide" onChange={recuperar} />
     </details>
   );
+}
+
+// ---------- Eliminar datos (acción destructiva: varias advertencias y escribir BORRAR) ----------
+function EliminarDatos() {
+  const borrarTodo = () => {
+    const n = Object.keys(db.animales).length;
+    if (!confirm(`⚠️ ATENCIÓN: va a borrar TODOS los datos de este teléfono (${cuantos(n, 'animal', 'animales')} con todo su historial).\n\nEsto NO se puede deshacer.\n\n¿Ya guardó una copia de seguridad?`)) return;
+    const escrito = prompt('Último aviso. Se perderá todo lo que no esté en una copia.\n\nPara confirmar, escriba la palabra BORRAR:');
+    if (escrito?.trim().toUpperCase() !== 'BORRAR') return alert('No se borró nada.');
+    db = { animales: {} }; guardar(db);
+    try { localStorage.removeItem(KEY + '.respaldo') } catch { /* sin almacenamiento */ }
+    filtro.q = ''; filtro.finca = ''; filtro.verRet = false;
+    volver(); avisar('🗑️ Se borraron todos los datos');
+  };
+  return (
+    <details class="peligro">
+      <summary>🗑️ Eliminar datos</summary>
+      <p><b>⚠️ Cuidado: esto borra información para siempre y no se puede deshacer.</b></p>
+      <p class="ayuda">Antes de borrar, guarde una copia por si la necesita después.</p>
+      <button class="grande" onClick={guardarCopia}>💾 Guardar una copia primero</button>
+      <p class="ayuda">Para borrar un solo animal, ábralo y use “🗑️ Eliminar este animal” al final de su ficha.</p>
+      <button class="grande peligro" onClick={borrarTodo}>🗑️ Borrar TODOS los datos de este teléfono</button>
+    </details>
+  );
+}
+
+function eliminarAnimal(a: Animal) {
+  if (!confirm(`⚠️ ¿Seguro que quiere ELIMINAR el animal ${a.arete}${a.nombre ? ' (' + a.nombre + ')' : ''} con todo su historial?\n\nEsto NO se puede deshacer.\n\nSi el animal se vendió o murió, mejor use “Otro → Vendido / Murió”: así queda el registro.`)) return;
+  if (!confirm(`Último aviso: se borrará ${a.arete} para siempre.\n\n¿Eliminar ahora?`)) return alert('No se borró nada.');
+  delete db.animales[a.arete]; guardar(db); volver(); avisar('🗑️ Animal eliminado');
 }
 
 // ---------- Lista ----------
@@ -147,6 +177,7 @@ function Lista() {
       </div>}
       <button class="pri grande" onClick={() => ir('escaner')}>📷 Escanear código QR</button>
       <button class="pri grande" onClick={() => abrir(null)}>➕ Agregar un animal</button>
+      {Object.keys(db.animales).length > 0 && <button class="grande" onClick={() => ir('cambios')}>📲 Pasar lo anotado a otro teléfono (QR)</button>}
       <button class="grande" onClick={() => ir('reportes')}>📋 Reportes (enviar o imprimir)</button>
       <AvisoRespaldo />
       <Alertas />
@@ -164,6 +195,7 @@ function Lista() {
       </button>}
       <div ref={(el: HTMLElement) => (cont = el)}><Tarjetas /></div>
       <CopiaSeguridad />
+      {Object.keys(db.animales).length > 0 && <EliminarDatos />}
     </section>
   );
 }
@@ -180,6 +212,7 @@ function Ficha() {
     const nuevo = a ?? ({ eventos: [] } as unknown as Animal);
     if (a && arete !== a.arete) delete db.animales[a.arete];
     for (const k of CAMPOS) (nuevo as any)[k] = val(k);
+    nuevo.creado ??= hoy();
     db.animales[arete] = nuevo; guardar(db); abrir(arete); avisar('✅ Animal guardado');
   };
   const formulario = (
@@ -234,6 +267,12 @@ function Ficha() {
         <button class="grande" onClick={() => mostrarReporte('ficha')}>📋 Reporte de este animal</button>
         <button class="grande" onClick={() => { qrModo = 'animal'; ir('qr') }}>📲 Pasar este animal a otro teléfono (QR)</button>
         <button class="grande" onClick={() => { qrModo = 'corral'; ir('qr') }}>🏷️ Código QR para el arete o corral</button>
+      </details>
+      <details class="peligro">
+        <summary>🗑️ Eliminar este animal</summary>
+        <p><b>⚠️ Cuidado: borra el animal y todo su historial para siempre. No se puede deshacer.</b></p>
+        <p class="ayuda">Si se vendió o murió, no lo elimine: use “Otro → 💰 Vendido / ✝️ Murió” para que quede el registro.</p>
+        <button class="grande peligro" onClick={() => eliminarAnimal(a)}>🗑️ Eliminar el animal {a.arete}</button>
       </details>
     </section>
   );
@@ -338,13 +377,43 @@ function leerQr(texto: string) {
   if (l.tipo === 'animal') {
     try {
       const n = fusionar(db, l.datos); guardar(db);
-      alert(`Listo. Se agregaron ${n.animales} animales nuevos y ${n.eventos} eventos nuevos.`);
-      return abrir(Object.keys((l.datos as { animales: object }).animales)[0]);
+      alert(`Listo. Se agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}.\n\nNo se borró nada.`);
+      const aretes = Object.keys((l.datos as { animales: object }).animales);
+      return aretes.length === 1 ? abrir(aretes[0]) : volver();
     } catch (e) { alert('Este código no es de la app de ganado. ' + (e as Error).message); return ir('lista') }
   }
   if (db.animales[l.arete]) return abrir(l.arete);
   if (confirm(`El arete ${l.arete} no está registrado.\n\n¿Quiere darlo de alta ahora?`)) { areteNuevo = l.arete; abrir(null); areteNuevo = '' }
   else ir('lista');
+}
+
+let cambiosDias = 0; // 0 = hoy, 1 = desde ayer, 6 = últimos 7 días
+function VerCambios() {
+  const desde = sumarDias(hoy(), -cambiosDias), d = cambiosDesde(db, desde);
+  const animales = Object.values(d.animales), eventos = animales.reduce((n, a) => n + a.eventos.length, 0);
+  const nuevos = animales.filter(a => a.creado && a.creado >= desde).length;
+  const resumen = [nuevos && cuantos(nuevos, 'animal nuevo', 'animales nuevos'), eventos && cuantos(eventos, 'cosa anotada', 'cosas anotadas')].filter(Boolean).join(' y ');
+  const opcion = (dias: number, texto: string, estilo = '') =>
+    <button style={estilo} aria-pressed={String(cambiosDias === dias)} onClick={() => { cambiosDias = dias; render() }}>{texto}</button>;
+  return (
+    <section>
+      <button onClick={volver}>← Volver</button>
+      <h2>Pasar lo anotado a otro teléfono</h2>
+      <p>¿Qué quiere pasar?</p>
+      <div class="eventos">
+        {opcion(0, 'Lo de hoy')}
+        {opcion(1, 'Desde ayer')}
+        {opcion(6, 'Últimos 7 días', 'grid-column:1/-1')}
+      </div>
+      <div class="card" style="text-align:center">
+        {animales.length ? <>
+          <p><b>Incluye: {resumen}</b></p>
+          <ImagenQr texto={qrDeDatos(d)} />
+          <p>En el otro teléfono abra la app, toque <b>“📷 Escanear código QR”</b> y apunte a esta pantalla. Se suma sin borrar nada.</p>
+        </> : <p>No hay nada anotado en este teléfono {cambiosDias ? 'en esos días' : 'hoy'}.</p>}
+      </div>
+    </section>
+  );
 }
 
 function VerEscaner() {

@@ -7,6 +7,7 @@ import { Animal, Db } from './datos';
 // Un QR de animal lleva este prefijo; cualquier otro texto se toma como número de arete.
 export const PREFIJO = 'GANADO1:';
 export const qrDeAnimal = (a: Animal) => PREFIJO + JSON.stringify({ animales: { [a.arete]: a } } satisfies Db);
+export const qrDeDatos = (d: Db) => PREFIJO + JSON.stringify(d);
 
 export type Lectura = { tipo: 'animal'; datos: unknown } | { tipo: 'arete'; arete: string };
 export function interpretar(texto: string): Lectura {
@@ -19,7 +20,7 @@ export function ImagenQr({ texto }: { texto: string }) {
   const aviso = <p class="bad"></p> as HTMLElement;
   QRCode.toDataURL(texto, { errorCorrectionLevel: 'L', margin: 2, width: 800 })
     .then(url => (img.src = url))
-    .catch(() => (aviso.textContent = 'Este animal tiene demasiado historial para un solo código QR. Use “Exportar respaldo” y mándelo por WhatsApp.'));
+    .catch(() => (aviso.textContent = 'Hay demasiados datos para un solo código QR. Use “⚙️ Copia de seguridad → 💾 Guardar una copia” y mándela por WhatsApp.'));
   return <div>{img}{aviso}</div>;
 }
 

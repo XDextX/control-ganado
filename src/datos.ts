@@ -14,6 +14,7 @@ export interface Evento { id: string; tipo: TipoEvento; fecha: string; nota: str
 export interface Animal {
   arete: string; nombre: string; tipo: 'leche' | 'carne'; nac: string; finca: string;
   sexo: string; raza: string; categoria: string; notas: string; eventos: Evento[];
+  creado?: string; // fecha en que se dio de alta en este teléfono (los animales viejos no la tienen)
 }
 export interface Db { animales: Record<string, Animal> }
 export const CAMPOS = ['arete', 'nombre', 'tipo', 'nac', 'finca', 'sexo', 'raza', 'categoria', 'notas'] as const;
@@ -29,7 +30,9 @@ export function guardar(db: Db) {
 export function ultimoRespaldo(): string | null { try { return localStorage.getItem(KEY + '.respaldo') } catch { return null } }
 export function marcarRespaldo() { try { localStorage.setItem(KEY + '.respaldo', hoy()) } catch { /* sin almacenamiento */ } }
 
-export const hoy = () => new Date().toISOString().slice(0, 10);
+// Fecha local (no UTC): en Costa Rica, después de las 6 p. m. UTC ya sería "mañana".
+export const fechaLocal = (d: Date) => new Date(+d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+export const hoy = () => fechaLocal(new Date());
 export const sumarDias = (f: string, n: number) => { const d = new Date(f + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) };
 export const diasHasta = (f: string, desde = hoy()) => Math.round((+new Date(f + 'T12:00:00Z') - +new Date(desde + 'T12:00:00Z')) / 864e5);
 export const fmt = (f?: string) => f ? new Date(f + 'T12:00:00Z').toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
@@ -70,6 +73,22 @@ export function alertas(db: Db, desde = hoy()) {
     out.push({ a, que: 'Parto probable', f: p.parto });
   }
   return out.filter(x => diasHasta(x.f, desde) <= 30).sort((x, y) => x.f.localeCompare(y.f));
+}
+
+// El id de cada evento empieza con la hora en que se anotó (ver nuevoId): de ahí sale el día en que se registró.
+export const anotadoEl = (e: Evento) => { const t = parseInt(e.id.slice(0, -4), 36); return isNaN(t) ? '' : fechaLocal(new Date(t)) };
+
+// Lo anotado desde una fecha: animales dados de alta y eventos registrados ese día o después, sin campos vacíos (para que quepa en un QR).
+// shortcut: los cambios a los datos de un animal ya existente (nombre, finca…) no viajan; para eso está la copia completa.
+export function cambiosDesde(db: Db, desde: string): Db {
+  const animales: Db['animales'] = {};
+  for (const a of Object.values(db.animales)) {
+    const eventos = a.eventos.filter(e => anotadoEl(e) >= desde);
+    if (!eventos.length && !(a.creado && a.creado >= desde)) continue;
+    const limpio = Object.fromEntries(Object.entries(a).filter(([, v]) => v !== '' && v != null)) as unknown as Animal;
+    animales[a.arete] = { ...limpio, eventos };
+  }
+  return { animales };
 }
 
 // Fusiona sin borrar: animales nuevos se agregan, eventos se unen por id. Los datos locales del animal ganan.

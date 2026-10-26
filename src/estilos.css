@@ -43,3 +43,6 @@ summary{font-weight:600;padding:14px;border:2px dashed var(--line);border-radius
 .eventos button[aria-pressed=true]{background:#2f6f3e;color:#fff;border-color:#2f6f3e;outline:3px solid #f0b070}
 /* Mensaje "Guardado" */
 .aviso-ok{position:fixed;left:16px;right:16px;bottom:24px;margin:auto;max-width:500px;background:#1f5f30;color:#fff;font-size:1.3em;font-weight:700;text-align:center;padding:20px;border-radius:14px;box-shadow:0 6px 24px #0006;z-index:10}
+/* Zona de borrado: roja para que se note que es peligrosa */
+details.peligro summary{border-color:var(--bad);color:var(--bad)}
+button.peligro{background:#a32020;color:#fff;border-color:#a32020}
