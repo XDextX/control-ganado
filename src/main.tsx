@@ -5,17 +5,20 @@ import {
   hoy, marcarRespaldo, nuevoId, ordenados, porArete, prenezAbierta, retiro, ultimoRespaldo,
 } from './datos';
 import { Reporte, TipoReporte, ficha, inventario, partos, reporteAImagen, salidas } from './reportes';
+import { Escaner, ImagenQr, detenerCamara, interpretar, qrDeAnimal } from './qr';
 
-type Vista = 'lista' | 'reportes' | 'reporte' | 'animal';
+type Vista = 'lista' | 'reportes' | 'reporte' | 'animal' | 'qr' | 'escaner';
 let db = cargar();
 let vista: Vista = 'lista', anterior: Vista = 'lista';
 let actual: Animal | null = null;
 const filtro = { q: '', finca: '', verRet: false };
 let repTipo: TipoReporte = 'inventario', mes = hoy().slice(0, 7);
+let qrModo: 'animal' | 'corral' = 'animal', areteNuevo = '';
 
 const raiz = document.getElementById('app')!;
-function render() { raiz.replaceChildren(<Encabezado />, <main>{{ lista: Lista, reportes: MenuReportes, reporte: VerReporte, animal: Ficha }[vista]()}</main>) }
-function ir(v: Vista) { if (v !== vista) anterior = vista; vista = v; render(); scrollTo(0, 0) }
+const VISTAS = { lista: Lista, reportes: MenuReportes, reporte: VerReporte, animal: Ficha, qr: VerQr, escaner: VerEscaner };
+function render() { raiz.replaceChildren(<Encabezado />, <main>{VISTAS[vista]()}</main>) }
+function ir(v: Vista) { detenerCamara(); if (v !== vista) anterior = vista; vista = v; render(); scrollTo(0, 0) }
 function abrir(arete: string | null) { actual = arete ? db.animales[arete] : null; ir('animal') }
 function volver() { actual = null; ir('lista') }
 
@@ -101,7 +104,8 @@ function Lista() {
   const pintar = () => cont.replaceChildren(<Tarjetas />);
   return (
     <section>
-      <button class="pri grande" onClick={() => ir('reportes')}>📋 Reportes (enviar o imprimir)</button>
+      <button class="pri grande" onClick={() => ir('escaner')}>📷 Escanear código QR</button>
+      <button class="grande" onClick={() => ir('reportes')}>📋 Reportes (enviar o imprimir)</button>
       <AvisoRespaldo />
       <Alertas />
       <div class="row" style="margin-top:10px">
@@ -138,10 +142,12 @@ function Ficha() {
     <section>
       <button onClick={volver}>← Volver</button>
       {a && <button class="grande" onClick={() => mostrarReporte('ficha')}>📋 Reporte de este animal</button>}
+      {a && <button class="grande" onClick={() => { qrModo = 'animal'; ir('qr') }}>📲 Pasar este animal a otro teléfono (QR)</button>}
+      {a && <button class="grande" onClick={() => { qrModo = 'corral'; ir('qr') }}>🏷️ Código QR para el arete o corral</button>}
       <form class="card" onSubmit={guardarAnimal}>
         <h2>{a ? 'Animal ' + a.arete : 'Nuevo animal'}</h2>
         <div class="row">
-          <div><label>Arete *</label><input name="arete" required value={a?.arete ?? ''} /></div>
+          <div><label>Arete *</label><input name="arete" required value={a?.arete ?? areteNuevo} /></div>
           <div><label>Nombre</label><input name="nombre" value={a?.nombre ?? ''} /></div>
         </div>
         <div class="row">
@@ -221,6 +227,49 @@ function Historial({ a }: { a: Animal }) {
         )) : <li class="mut">Sin eventos todavía.</li>}
       </ul>
     </div>
+  );
+}
+
+// ---------- Códigos QR ----------
+function VerQr() {
+  const a = actual!, corral = qrModo === 'corral';
+  return (
+    <section>
+      <div class="noprint"><button onClick={() => ir('animal')}>← Volver</button></div>
+      <div class="card" style="text-align:center">
+        <h2>{corral ? 'Arete' : 'Pasar animal'} {a.arete}{a.nombre ? ' · ' + a.nombre : ''}</h2>
+        <ImagenQr texto={corral ? a.arete : qrDeAnimal(a)} />
+        <p class="noprint">{corral
+          ? 'Imprima este código y péguelo en el corral o junto al arete. Al escanearlo con la app se abre la ficha del animal.'
+          : 'En el otro teléfono abra la app, toque “📷 Escanear código QR” y apunte a esta pantalla. Se suman los datos sin borrar nada.'}</p>
+      </div>
+      {corral && <button class="grande noprint" onClick={() => print()}>🖨️ Imprimir código</button>}
+    </section>
+  );
+}
+
+function leerQr(texto: string) {
+  let l;
+  try { l = interpretar(texto) } catch { alert('El código QR no se pudo leer. Intente de nuevo.'); return ir('escaner') }
+  if (l.tipo === 'animal') {
+    try {
+      const n = fusionar(db, l.datos); guardar(db);
+      alert(`Listo. Se agregaron ${n.animales} animales nuevos y ${n.eventos} eventos nuevos.`);
+      return abrir(Object.keys((l.datos as { animales: object }).animales)[0]);
+    } catch (e) { alert('Este código no es de la app de ganado. ' + (e as Error).message); return ir('lista') }
+  }
+  if (db.animales[l.arete]) return abrir(l.arete);
+  if (confirm(`El arete ${l.arete} no está registrado.\n\n¿Quiere darlo de alta ahora?`)) { areteNuevo = l.arete; abrir(null); areteNuevo = '' }
+  else ir('lista');
+}
+
+function VerEscaner() {
+  return (
+    <section>
+      <button onClick={volver}>← Volver</button>
+      <h2>Escanear código QR</h2>
+      <Escaner alLeer={leerQr} />
+    </section>
   );
 }
 
