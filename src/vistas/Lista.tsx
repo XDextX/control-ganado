@@ -3,6 +3,7 @@ import { alertas, cuantos, diasHasta, fincas, fmt, porArete, prenezAbierta, reti
 import { abrir, est, ir, render } from '../estado';
 import { AvisoRespaldo, CopiaSeguridad } from '../componentes/CopiaSeguridad';
 import { EliminarDatos } from '../componentes/EliminarDatos';
+import { Comentarios } from '../componentes/Comentarios';
 
 function Alertas() {
   const al = alertas(est.db);
@@ -95,6 +96,7 @@ export function Lista() {
       <div id="lista" ref={(el: HTMLElement) => (cont = el)}><Tarjetas cambiar={pintar} /></div>
       <CopiaSeguridad />
       {hay && <EliminarDatos />}
+      <Comentarios />
     </section>
   );
 }
