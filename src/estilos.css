@@ -47,3 +47,7 @@ summary{font-weight:600;padding:14px;border:2px dashed var(--line);border-radius
 details.peligro summary{border-color:var(--bad);color:var(--bad)}
 button.peligro{background:#a32020;color:#fff;border-color:#a32020}
 button:disabled{opacity:.45;cursor:not-allowed}
+/* Paginación de la lista */
+.paginas{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center;margin:12px 0}
+.paginas>span{grid-column:1/-1;order:-1}
+.paginas button.grande{margin:0;text-align:center;padding:14px 8px}

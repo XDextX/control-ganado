@@ -12,6 +12,7 @@ export const est = {
   anterior: 'lista' as Vista,
   actual: null as Animal | null,
   filtro: { q: '', finca: '', verRet: false },
+  pagina: 0, // página de la lista de animales (empieza en 0)
   repTipo: 'inventario' as TipoReporte,
   mes: hoy().slice(0, 7),
   qrModo: 'animal' as 'animal' | 'corral',
