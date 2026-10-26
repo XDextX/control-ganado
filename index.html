@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registro de Ganado</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<meta name="theme-color" content="#2f6f3e">
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--fg:#222;--mut:#666;--line:#ddd;--acc:#2f6f3e;--warn:#b5651d;--bad:#a33}
+@media (prefers-color-scheme:dark){:root{--bg:#161815;--card:#22251f;--fg:#eee;--mut:#9a9a9a;--line:#3a3d36;--acc:#6fbf7f;--warn:#e0a060;--bad:#e07070}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,sans-serif}
+header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:#2f6f3e;color:#fff}
+header h1{font-size:1.2rem;margin:0;flex:1}
+main{max-width:760px;margin:auto;padding:16px}
+button,input,select,textarea{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:44px}
+button{cursor:pointer}
+button.pri{background:#2f6f3e;color:#fff;border:0}
+header button{background:#ffffff22;color:#fff;border:1px solid #ffffff55}
+input,select,textarea{width:100%}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1 1 140px}
+.item{display:flex;justify-content:space-between;gap:8px;cursor:pointer}
+.mut{color:var(--mut);font-size:.9em}
+.tag{font-size:.8em;padding:2px 8px;border-radius:99px;border:1px solid var(--line)}
+.warn{color:var(--warn)}.bad{color:var(--bad)}
+label{display:block;font-size:.9em;color:var(--mut);margin-top:6px}
+h2{font-size:1.1rem;margin:16px 0 4px}
+ul{list-style:none;padding:0;margin:0}
+li.ev{padding:8px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>🐄 Registro de Ganado</h1>
+  <button id="bExp">Exportar respaldo</button>
+  <button id="bImp">Importar respaldo</button>
+  <input id="fImp" type="file" accept=".json,application/json" class="hide">
+</header>
+<main>
+  <section id="vLista">
+    <div id="alertas"></div>
+    <div class="row" style="margin-top:10px">
+      <input id="q" type="search" placeholder="Buscar por arete o nombre" aria-label="Buscar">
+      <button class="pri" id="bNuevo" style="flex:0 0 auto">+ Nuevo animal</button>
+    </div>
+    <label><input type="checkbox" id="verRet" style="width:auto;min-height:0"> Mostrar retirados</label>
+    <div id="lista"></div>
+  </section>
+
+  <section id="vAnimal" class="hide">
+    <button id="bVolver">← Volver</button>
+    <form id="fAnimal" class="card">
+      <h2 id="tAnimal">Nuevo animal</h2>
+      <div class="row">
+        <div><label>Arete *</label><input name="arete" required></div>
+        <div><label>Nombre</label><input name="nombre"></div>
+      </div>
+      <div class="row">
+        <div><label>Tipo</label><select name="tipo"><option value="leche">Leche</option><option value="carne">Carne</option></select></div>
+        <div><label>Fecha de nacimiento</label><input name="nac" type="date"></div>
+      </div>
+      <label>Notas</label><textarea name="notas" rows="2"></textarea>
+      <p><button class="pri">Guardar animal</button></p>
+    </form>
+    <div id="zonaEventos" class="hide">
+      <form id="fEvento" class="card">
+        <h2>Añadir evento</h2>
+        <div class="row">
+          <div><label>Evento</label><select name="tipo" id="selEv"></select></div>
+          <div><label>Fecha</label><input name="fecha" type="date" required></div>
+        </div>
+        <div id="motivoBox" class="hide"><label>Motivo del retiro</label>
+          <select name="motivo"><option>Venta</option><option>Muerte</option><option>Baja (desecho)</option></select></div>
+        <label>Nota</label><input name="nota" placeholder="Toro, semen, cría, comprador…">
+        <p><button class="pri">Añadir evento</button></p>
+      </form>
+      <div class="card"><h2>Historial</h2><div id="resumen" class="mut"></div><ul id="hist"></ul></div>
+    </div>
+  </section>
+</main>
+<script>
+const KEY = 'ganado.v1';
+const EVENTOS = {celo:'Celo (ciclo)', monta:'Monta / inseminación', prenez:'Preñez confirmada', parto:'Parto', aborto:'Aborto / vacía', destete:'Destete', secado:'Secado', retiro:'Retiro (baja/venta/muerte)'};
+const GESTACION = 283, SECADO_ANTES = 60;
+let db = cargar(), actual = null;
+
+function cargar(){ try { return JSON.parse(localStorage.getItem(KEY)) || {animales:{}} } catch(e){ alert('No se pudieron leer los datos guardados. Importe un respaldo.'); return {animales:{}} } }
+function guardar(){ try { localStorage.setItem(KEY, JSON.stringify(db)) } catch(e){ alert('¡No se pudo guardar! Exporte un respaldo ahora. ' + e.message) } }
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+const hoy = () => new Date().toISOString().slice(0,10);
+const sumarDias = (f, n) => { const d = new Date(f + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10) };
+const diasHasta = f => Math.round((new Date(f + 'T12:00:00Z') - new Date(hoy() + 'T12:00:00Z')) / 864e5);
+const fmt = f => f ? new Date(f + 'T12:00:00Z').toLocaleDateString('es', {day:'numeric', month:'short', year:'numeric', timeZone:'UTC'}) : '';
+const ordenados = a => [...a.eventos].sort((x, y) => x.fecha.localeCompare(y.fecha) || x.id.localeCompare(y.id));
+const retiro = a => a.eventos.find(e => e.tipo === 'retiro');
+
+// Gestación abierta: última monta/preñez sin parto ni aborto posterior. Fecha base = la monta más reciente antes de esa preñez.
+function prenezAbierta(a){
+  let base = null;
+  for (const e of ordenados(a)) {
+    if (e.tipo === 'monta') base = e.fecha;
+    else if (e.tipo === 'prenez' && !base) base = e.fecha;
+    else if (e.tipo === 'parto' || e.tipo === 'aborto') base = null;
+  }
+  if (!base) return null;
+  const parto = sumarDias(base, GESTACION);
+  return {parto, secado: a.tipo === 'leche' ? sumarDias(parto, -SECADO_ANTES) : null};
+}
+
+function alertas(){
+  const out = [];
+  for (const a of Object.values(db.animales)) {
+    if (retiro(a)) continue;
+    const p = prenezAbierta(a); if (!p) continue;
+    const yaSeco = a.eventos.some(e => e.tipo === 'secado' && e.fecha >= sumarDias(p.parto, -GESTACION));
+    if (p.secado && !yaSeco) out.push({a, que:'Secar', f:p.secado});
+    out.push({a, que:'Parto probable', f:p.parto});
+  }
+  return out.filter(x => diasHasta(x.f) <= 30).sort((x, y) => x.f.localeCompare(y.f));
+}
+
+function avisoRespaldo(){
+  if (!Object.keys(db.animales).length) return '';
+  let ult = null; try { ult = localStorage.getItem(KEY + '.respaldo') } catch(e) {}
+  const d = ult ? -diasHasta(ult) : null;
+  if (d !== null && d < 7) return '';
+  return `<div class="card warn">💾 ${d === null ? 'Aún no ha exportado ningún respaldo.' : `Último respaldo: hace ${d} días.`} Pulse “Exportar respaldo” para no perder datos.</div>`;
+}
+
+function pintarLista(){
+  const al = alertas();
+  $('#alertas').innerHTML = avisoRespaldo() + (al.length ? `<div class="card"><h2>⚠️ Próximos 30 días</h2><ul>${al.map(x => {
+    const d = diasHasta(x.f);
+    return `<li class="ev item" data-arete="${esc(x.a.arete)}"><span><b>${esc(x.que)}</b> · ${esc(x.a.arete)} ${esc(x.a.nombre)}</span><span class="${d < 0 ? 'bad' : 'warn'}">${fmt(x.f)} (${d < 0 ? 'hace ' + -d : 'en ' + d} días)</span></li>`
+  }).join('')}</ul></div>` : '');
+  const q = $('#q').value.trim().toLowerCase(), verRet = $('#verRet').checked;
+  const lista = Object.values(db.animales)
+    .filter(a => (verRet || !retiro(a)) && (!q || a.arete.toLowerCase().includes(q) || (a.nombre || '').toLowerCase().includes(q)))
+    .sort((x, y) => x.arete.localeCompare(y.arete, 'es', {numeric:true}));
+  $('#lista').innerHTML = lista.map(a => {
+    const r = retiro(a), p = prenezAbierta(a);
+    return `<div class="card item" data-arete="${esc(a.arete)}"><span><b>${esc(a.arete)}</b> ${esc(a.nombre)}<br><span class="mut">${a.tipo === 'leche' ? 'Leche' : 'Carne'} · ${a.eventos.length} eventos</span></span>
+      <span>${r ? `<span class="tag bad">${esc(r.motivo)}</span>` : p ? `<span class="tag">Preñada · parto ${fmt(p.parto)}</span>` : ''}</span></div>`
+  }).join('') || `<p class="mut">${Object.keys(db.animales).length ? 'Sin resultados.' : 'Aún no hay animales. Pulse “+ Nuevo animal”.'}</p>`;
+}
+
+function abrir(arete){
+  actual = arete ? db.animales[arete] : null;
+  const f = $('#fAnimal');
+  f.reset();
+  if (actual) for (const k of ['arete', 'nombre', 'tipo', 'nac', 'notas']) f[k].value = actual[k] || '';
+  $('#tAnimal').textContent = actual ? 'Animal ' + actual.arete : 'Nuevo animal';
+  $('#zonaEventos').classList.toggle('hide', !actual);
+  $('#vLista').classList.add('hide'); $('#vAnimal').classList.remove('hide');
+  if (actual) pintarAnimal();
+  scrollTo(0, 0);
+}
+function volver(){ actual = null; $('#vAnimal').classList.add('hide'); $('#vLista').classList.remove('hide'); pintarLista() }
+
+function pintarAnimal(){
+  const a = actual, ev = ordenados(a).reverse(), c = t => a.eventos.filter(e => e.tipo === t).length;
+  const p = prenezAbierta(a), r = retiro(a);
+  $('#resumen').innerHTML = `Preñeces: ${c('prenez')} · Partos: ${c('parto')} · Celos: ${c('celo')} · Destetes: ${c('destete')} · Secados: ${c('secado')}` +
+    (p ? `<br><b class="warn">Parto probable: ${fmt(p.parto)}${p.secado ? ' · Secar el ' + fmt(p.secado) : ''}</b>` : '') +
+    (r ? `<br><b class="bad">Retirado: ${esc(r.motivo)} el ${fmt(r.fecha)}</b>` : '');
+  $('#hist').innerHTML = ev.map(e => `<li class="ev"><span><b>${esc(EVENTOS[e.tipo])}</b>${e.motivo ? ' · ' + esc(e.motivo) : ''}<br><span class="mut">${fmt(e.fecha)}${e.nota ? ' · ' + esc(e.nota) : ''}</span></span>
+    <button data-borrar="${esc(e.id)}" aria-label="Borrar evento" style="flex:0 0 auto">✕</button></li>`).join('') || '<li class="mut">Sin eventos todavía.</li>';
+}
+
+$('#selEv').innerHTML = Object.entries(EVENTOS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+$('#selEv').onchange = e => $('#motivoBox').classList.toggle('hide', e.target.value !== 'retiro');
+$('#q').oninput = $('#verRet').onchange = pintarLista;
+$('#bNuevo').onclick = () => abrir(null);
+$('#bVolver').onclick = volver;
+document.addEventListener('click', e => {
+  const it = e.target.closest('[data-arete]'); if (it) return abrir(it.dataset.arete);
+  const b = e.target.closest('[data-borrar]');
+  if (b && confirm('¿Borrar este evento?')) { actual.eventos = actual.eventos.filter(x => x.id !== b.dataset.borrar); guardar(); pintarAnimal() }
+});
+
+$('#fAnimal').onsubmit = e => {
+  e.preventDefault();
+  const f = e.target, arete = f.arete.value.trim();
+  if (!arete) return;
+  if (arete !== actual?.arete && db.animales[arete]) return alert('Ya existe un animal con el arete ' + arete);
+  const a = actual || {eventos: []};
+  if (actual && arete !== actual.arete) delete db.animales[actual.arete];
+  Object.assign(a, {arete, nombre: f.nombre.value.trim(), tipo: f.tipo.value, nac: f.nac.value, notas: f.notas.value.trim()});
+  db.animales[arete] = a; guardar(); abrir(arete);
+};
+$('#fEvento').onsubmit = e => {
+  e.preventDefault();
+  const f = e.target, ev = {id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tipo: f.tipo.value, fecha: f.fecha.value, nota: f.nota.value.trim()};
+  if (ev.tipo === 'retiro') { if (retiro(actual)) return alert('Este animal ya está retirado.'); ev.motivo = f.motivo.value }
+  actual.eventos.push(ev); guardar(); f.nota.value = ''; pintarAnimal();
+};
+
+$('#bExp').onclick = () => {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(db, null, 1)], {type: 'application/json'}));
+  Object.assign(document.createElement('a'), {href: url, download: `ganado-respaldo-${hoy()}.json`}).click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try { localStorage.setItem(KEY + '.respaldo', hoy()) } catch(e) {}
+  pintarLista();
+};
+$('#bImp').onclick = () => $('#fImp').click();
+$('#fImp').onchange = async e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  try {
+    const n = fusionar(db, JSON.parse(await file.text()));
+    guardar(); volver(); alert(`Respaldo importado: ${n.animales} animales nuevos, ${n.eventos} eventos nuevos.`);
+  } catch(err) { alert('Archivo no válido: ' + err.message) }
+};
+// Fusiona sin borrar: animales nuevos se agregan, eventos se unen por id. Los datos locales del animal ganan.
+// shortcut: un evento borrado reaparece si otro respaldo aún lo tiene; añadir "borrados" si estorba.
+function fusionar(dst, src){
+  if (!src || typeof src.animales !== 'object') throw new Error('no es un respaldo de ganado');
+  const n = {animales: 0, eventos: 0};
+  for (const [k, a] of Object.entries(src.animales)) {
+    if (!a || !Array.isArray(a.eventos) || typeof a.arete !== 'string') throw new Error('animal mal formado: ' + k);
+    const loc = dst.animales[a.arete];
+    if (!loc) { dst.animales[a.arete] = a; n.animales++; n.eventos += a.eventos.length; continue }
+    const ids = new Set(loc.eventos.map(x => x.id));
+    for (const ev of a.eventos) if (!ids.has(ev.id)) { loc.eventos.push(ev); n.eventos++ }
+  }
+  return n;
+}
+
+// Autoverificación rápida de las fechas y la fusión.
+console.assert(sumarDias('2026-01-01', GESTACION) === '2026-10-11', 'gestación');
+console.assert(prenezAbierta({tipo:'leche', eventos:[{id:'a', tipo:'monta', fecha:'2026-01-01'}]}).secado === '2026-08-12', 'secado');
+console.assert(prenezAbierta({tipo:'carne', eventos:[{id:'a', tipo:'monta', fecha:'2026-01-01'}, {id:'b', tipo:'parto', fecha:'2026-10-10'}]}) === null, 'parto cierra');
+{ const d = {animales:{X:{arete:'X', eventos:[{id:'1'}]}}}; fusionar(d, {animales:{X:{arete:'X', eventos:[{id:'1'}, {id:'2'}]}}}); console.assert(d.animales.X.eventos.length === 2, 'fusión') }
+
+$('#fEvento').fecha.value = hoy();
+pintarLista();
+// Sin señal en el campo: solo funciona servido por http(s); con doble clic (file://) se ignora.
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
