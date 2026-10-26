@@ -46,3 +46,4 @@ summary{font-weight:600;padding:14px;border:2px dashed var(--line);border-radius
 /* Zona de borrado: roja para que se note que es peligrosa */
 details.peligro summary{border-color:var(--bad);color:var(--bad)}
 button.peligro{background:#a32020;color:#fff;border-color:#a32020}
+button:disabled{opacity:.45;cursor:not-allowed}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Animal, Db, alertas, anotadoEl, cambiosDesde, edad, fusionar, prenezAbierta, sumarDias } from './datos';
+import { Animal, Db, alertas, anotadoEl, cambiosDesde, diceBorrar, edad, fusionar, prenezAbierta, sumarDias } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
@@ -62,5 +62,12 @@ describe('importar respaldo', () => {
   it('rechaza archivos que no son respaldo', () => {
     expect(() => fusionar({ animales: {} }, { hola: 1 })).toThrow();
     expect(() => fusionar({ animales: {} }, { animales: { X: { arete: 'X' } } })).toThrow();
+  });
+});
+
+describe('confirmar borrado', () => {
+  it('acepta BORRAR aunque el teclado agregue puntos, espacios, minúsculas o tildes', () => {
+    for (const t of ['BORRAR', 'borrar', ' Borrar. ', 'Bórrar', 'BORRAR!']) expect(diceBorrar(t)).toBe(true);
+    for (const t of ['', 'borra', 'borrar todo', 'no']) expect(diceBorrar(t)).toBe(false);
   });
 });

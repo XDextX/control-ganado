@@ -1,7 +1,7 @@
 import { h, Fragment } from './jsx';
 import './estilos.css';
 import {
-  Animal, CAMPOS, CATEGORIAS, KEY, cambiosDesde, cuantos, sumarDias, EVENTOS, MOTIVOS, TipoEvento, alertas, cargar, diasHasta, fincas, fmt, fusionar, guardar,
+  Animal, CAMPOS, CATEGORIAS, KEY, cambiosDesde, cuantos, diceBorrar, sumarDias, EVENTOS, MOTIVOS, TipoEvento, alertas, cargar, diasHasta, fincas, fmt, fusionar, guardar,
   hoy, marcarRespaldo, nuevoId, ordenados, porArete, prenezAbierta, retiro, ultimoRespaldo,
 } from './datos';
 import { Reporte, TipoReporte, ficha, inventario, partos, reporteAImagen, salidas } from './reportes';
@@ -95,13 +95,34 @@ function CopiaSeguridad() {
   );
 }
 
-// ---------- Eliminar datos (acción destructiva: varias advertencias y escribir BORRAR) ----------
+// ---------- Eliminar datos (acción destructiva: advertencia y escribir BORRAR) ----------
+// La confirmación va dentro de la pantalla, no en ventanitas del navegador: el navegador interno de WhatsApp
+// y otras apps puede bloquear confirm()/prompt(), y el autocorrector cambia lo escrito.
+function ConfirmarBorrado({ boton, aviso, alConfirmar }: { boton: string; aviso: string; alConfirmar: () => void }) {
+  let caja!: HTMLElement, abrirBtn!: HTMLElement, si!: HTMLButtonElement, campo!: HTMLInputElement;
+  const mostrar = (ver: boolean) => {
+    caja.classList.toggle('hide', !ver); abrirBtn.classList.toggle('hide', ver);
+    if (ver) { campo.value = ''; si.disabled = true; campo.focus() }
+  };
+  return (
+    <div>
+      <button class="grande peligro" ref={(el: HTMLElement) => (abrirBtn = el)} onClick={() => mostrar(true)}>{boton}</button>
+      <div class="card hide confirmar" ref={(el: HTMLElement) => (caja = el)}>
+        <p class="bad"><b>⚠️ {aviso}</b></p>
+        <p><b>Esto NO se puede deshacer.</b></p>
+        <label for="f-borrar">Para confirmar, escriba la palabra BORRAR</label>
+        <input id="f-borrar" ref={(el: HTMLInputElement) => (campo = el)} autocomplete="off" autocapitalize="characters" spellcheck="false"
+          onInput={() => (si.disabled = !diceBorrar(campo.value))} />
+        <button class="grande peligro" disabled ref={(el: HTMLButtonElement) => (si = el)} onClick={alConfirmar}>🗑️ Sí, borrar para siempre</button>
+        <button class="grande" onClick={() => { mostrar(false); avisar('No se borró nada') }}>✋ No, cancelar</button>
+      </div>
+    </div>
+  );
+}
+
 function EliminarDatos() {
+  const n = Object.keys(db.animales).length;
   const borrarTodo = () => {
-    const n = Object.keys(db.animales).length;
-    if (!confirm(`⚠️ ATENCIÓN: va a borrar TODOS los datos de este teléfono (${cuantos(n, 'animal', 'animales')} con todo su historial).\n\nEsto NO se puede deshacer.\n\n¿Ya guardó una copia de seguridad?`)) return;
-    const escrito = prompt('Último aviso. Se perderá todo lo que no esté en una copia.\n\nPara confirmar, escriba la palabra BORRAR:');
-    if (escrito?.trim().toUpperCase() !== 'BORRAR') return alert('No se borró nada.');
     db = { animales: {} }; guardar(db);
     try { localStorage.removeItem(KEY + '.respaldo') } catch { /* sin almacenamiento */ }
     filtro.q = ''; filtro.finca = ''; filtro.verRet = false;
@@ -114,14 +135,13 @@ function EliminarDatos() {
       <p class="ayuda">Antes de borrar, guarde una copia por si la necesita después.</p>
       <button class="grande" onClick={guardarCopia}>{textoCopia('primero')}</button>
       <p class="ayuda">Para borrar un solo animal, ábralo y use “🗑️ Eliminar este animal” al final de su ficha.</p>
-      <button class="grande peligro" onClick={borrarTodo}>🗑️ Borrar TODOS los datos de este teléfono</button>
+      <ConfirmarBorrado boton="🗑️ Borrar TODOS los datos de este teléfono" alConfirmar={borrarTodo}
+        aviso={`Va a borrar TODOS los datos de este teléfono: ${cuantos(n, 'animal', 'animales')} con todo su historial. Se perderá todo lo que no esté en una copia.`} />
     </details>
   );
 }
 
 function eliminarAnimal(a: Animal) {
-  if (!confirm(`⚠️ ¿Seguro que quiere ELIMINAR el animal ${a.arete}${a.nombre ? ' (' + a.nombre + ')' : ''} con todo su historial?\n\nEsto NO se puede deshacer.\n\nSi el animal se vendió o murió, mejor use “Otro → Vendido / Murió”: así queda el registro.`)) return;
-  if (!confirm(`Último aviso: se borrará ${a.arete} para siempre.\n\n¿Eliminar ahora?`)) return alert('No se borró nada.');
   delete db.animales[a.arete]; guardar(db); volver(); avisar('🗑️ Animal eliminado');
 }
 
@@ -285,7 +305,8 @@ function Ficha() {
         <summary>🗑️ Eliminar este animal</summary>
         <p><b>⚠️ Cuidado: borra el animal y todo su historial para siempre. No se puede deshacer.</b></p>
         <p class="ayuda">Si se vendió o murió, no lo elimine: use “Otro → 💰 Vendido / ✝️ Murió” para que quede el registro.</p>
-        <button class="grande peligro" onClick={() => eliminarAnimal(a)}>🗑️ Eliminar el animal {a.arete}</button>
+        <ConfirmarBorrado boton={`🗑️ Eliminar el animal ${a.arete}`} alConfirmar={() => eliminarAnimal(a)}
+          aviso={`Va a eliminar el animal ${a.arete}${a.nombre ? ' (' + a.nombre + ')' : ''} con todo su historial.`} />
       </details>
     </section>
   );

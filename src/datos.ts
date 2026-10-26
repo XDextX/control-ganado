@@ -42,7 +42,9 @@ export const edad = (nac: string, desde = hoy()) => {
   const m = (y2 - y1) * 12 + m2 - m1 - (d2 < d1 ? 1 : 0);
   return m < 12 ? m + ' meses' : Math.floor(m / 12) + (m < 24 ? ' año' : ' años') + (m % 12 ? ' ' + (m % 12) + ' m' : '');
 };
-export const cuantos = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+// Acepta "borrar", "Borrar.", " BORRAR " o "Bórrar": el autocorrector del teléfono suele agregar puntos o tildes.
+export const diceBorrar = (t: string) => t.normalize('NFD').toUpperCase().replace(/[^A-Z]/g, '') === 'BORRAR';
+export const cuantos =(n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 export const nuevoId =() => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 export const porArete = (x: Animal, y: Animal) => x.arete.localeCompare(y.arete, 'es', { numeric: true });
 export const nombreA = (a: Animal) => a.arete + (a.nombre ? ' ' + a.nombre : '');
