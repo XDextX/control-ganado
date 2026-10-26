@@ -1,5 +1,5 @@
 // Cada reporte es un objeto simple que se pinta igual en pantalla, en PDF (imprimir) y en imagen (WhatsApp).
-import { Animal, Db, EVENTOS, MOTIVOS, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, prenezAbierta, retiro } from './datos';
+import { Animal, Db, EVENTOS, MOTIVOS, cuantos, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, prenezAbierta, retiro } from './datos';
 
 export interface Seccion { titulo: string; nota: string; cols: string[]; filas: string[][] }
 export interface Reporte { titulo: string; sub: string; secciones: Seccion[] }
@@ -8,7 +8,7 @@ export type TipoReporte = 'inventario' | 'partos' | 'salidas' | 'ficha';
 const activos = (db: Db) => Object.values(db.animales).filter(a => !retiro(a)).sort(porArete);
 const contar = (lista: Animal[]) => {
   const c: Record<string, number> = {};
-  for (const a of lista) c[a.categoria || 'Sin categoría'] = (c[a.categoria || 'Sin categoría'] || 0) + 1;
+  for (const a of lista) if (a.categoria) c[a.categoria] = (c[a.categoria] || 0) + 1;
   return Object.entries(c).map(([k, n]) => `${n} ${k}`).join(' · ');
 };
 
@@ -17,9 +17,9 @@ export function inventario(db: Db): Reporte {
   for (const a of activos(db)) (porFinca[a.finca || 'Sin finca'] ??= []).push(a);
   const total = Object.values(porFinca).flat().length;
   return {
-    titulo: 'Animales por finca', sub: `${total} animales activos · ${fmt(hoy())}`,
+    titulo: 'Animales por finca', sub: `${cuantos(total, 'animal activo', 'animales activos')} · ${fmt(hoy())}`,
     secciones: Object.keys(porFinca).sort().map(f => ({
-      titulo: `${f} — ${porFinca[f].length} animales`, nota: contar(porFinca[f]),
+      titulo: `${f} — ${cuantos(porFinca[f].length, 'animal', 'animales')}`, nota: contar(porFinca[f]),
       cols: ['Arete', 'Categoría', 'Raza', 'Edad'], filas: porFinca[f].map(a => [nombreA(a), a.categoria, a.raza, edad(a.nac)]),
     })),
   };
@@ -32,7 +32,7 @@ export function partos(db: Db): Reporte {
       return [nombreA(a), a.finca, fmt(p!.parto), p!.secado ? fmt(p!.secado) : '—', d < 0 ? `Pasó hace ${-d} días` : `Faltan ${d} días`];
     });
   return {
-    titulo: 'Próximos partos y secados', sub: `${filas.length} vacas preñadas · ${fmt(hoy())}`,
+    titulo: 'Próximos partos y secados', sub: `${cuantos(filas.length, 'vaca preñada', 'vacas preñadas')} · ${fmt(hoy())}`,
     secciones: [{
       titulo: '', nota: filas.length ? 'Parto = monta + 283 días. Secar 60 días antes (solo leche).' : 'No hay vacas preñadas anotadas.',
       cols: ['Animal', 'Finca', 'Parto', 'Secar', 'Cuándo'], filas,
@@ -45,7 +45,7 @@ export function salidas(db: Db, mes: string): Reporte {
     .sort((x, y) => x.r.fecha.localeCompare(y.r.fecha));
   const nombreMes = new Date(mes + '-15T12:00:00Z').toLocaleDateString('es', { month: 'long', year: 'numeric', timeZone: 'UTC' });
   return {
-    titulo: 'Salidas de ' + nombreMes, sub: `${sal.length} animales salieron`,
+    titulo: 'Salidas de ' + nombreMes, sub: `${sal.length === 1 ? '1 animal salió' : sal.length + ' animales salieron'}`,
     secciones: [{
       titulo: '', nota: sal.length ? MOTIVOS.map(m => `${sal.filter(x => x.r.motivo === m).length} ${m}`).join(' · ') : 'Ningún animal salió este mes.',
       cols: ['Fecha', 'Animal', 'Finca', 'Motivo', 'Nota'], filas: sal.map(({ a, r }) => [fmt(r.fecha), nombreA(a), a.finca, r.motivo ?? '', r.nota]),

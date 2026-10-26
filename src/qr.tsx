@@ -26,9 +26,21 @@ export function ImagenQr({ texto }: { texto: string }) {
 let detener: (() => void) | null = null;
 export const detenerCamara = () => detener?.();
 
-export function Escaner({ alLeer }: { alLeer: (texto: string) => void }) {
+export function Escaner({ alLeer, reintentar }: { alLeer: (texto: string) => void; reintentar: () => void }) {
   const video = <video playsinline muted style="width:100%;border-radius:10px;background:#000" /> as HTMLVideoElement;
   const msg = <p>Apunte la cámara al código QR y manténgala quieta.</p> as HTMLElement;
+  const sinPermiso = () => {
+    video.remove();
+    msg.replaceChildren(<div class="card warn">
+      <p><b>No se pudo abrir la cámara.</b> El teléfono necesita su permiso. Así se da:</p>
+      <ol>
+        <li>Arriba, junto a la dirección, toque el candado 🔒 o los tres puntitos.</li>
+        <li>Entre a <b>Permisos</b> o <b>Configuración del sitio</b>.</li>
+        <li>En <b>Cámara</b>, elija <b>Permitir</b>.</li>
+      </ol>
+      <button class="pri grande" onClick={reintentar}>🔄 Intentar de nuevo</button>
+    </div>);
+  };
   const c = document.createElement('canvas'), x = c.getContext('2d', { willReadFrequently: true })!;
   if (!navigator.mediaDevices?.getUserMedia) msg.textContent = 'Este teléfono o navegador no permite usar la cámara aquí.';
   else navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(stream => {
@@ -48,6 +60,6 @@ export function Escaner({ alLeer }: { alLeer: (texto: string) => void }) {
       requestAnimationFrame(paso);
     };
     paso();
-  }).catch(() => (msg.textContent = 'No se pudo abrir la cámara. Revise que la app tenga permiso para usar la cámara.'));
+  }).catch(sinPermiso);
   return <div>{video}{msg}</div>;
 }

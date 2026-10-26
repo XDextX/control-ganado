@@ -1,7 +1,7 @@
 import { h, Fragment } from './jsx';
 import './estilos.css';
 import {
-  Animal, CAMPOS, CATEGORIAS, EVENTOS, MOTIVOS, TipoEvento, alertas, cargar, diasHasta, fincas, fmt, fusionar, guardar,
+  Animal, CAMPOS, CATEGORIAS, cuantos, EVENTOS, MOTIVOS, TipoEvento, alertas, cargar, diasHasta, fincas, fmt, fusionar, guardar,
   hoy, marcarRespaldo, nuevoId, ordenados, porArete, prenezAbierta, retiro, ultimoRespaldo,
 } from './datos';
 import { Reporte, TipoReporte, ficha, inventario, partos, reporteAImagen, salidas } from './reportes';
@@ -72,7 +72,7 @@ function CopiaSeguridad() {
   };
   let archivo!: HTMLInputElement;
   return (
-    <details>
+    <details open={!Object.keys(db.animales).length}>
       <summary>⚙️ Copia de seguridad</summary>
       <p class="ayuda">Guarde una copia seguido para no perder sus datos si se daña o cambia de teléfono. También sirve para pasar todos los animales a otro teléfono por WhatsApp.</p>
       <button class="grande" onClick={guardarCopia}>💾 Guardar una copia</button>
@@ -119,13 +119,15 @@ function Tarjetas() {
     .filter(a => (filtro.verRet || !retiro(a)) && (!filtro.finca || a.finca === filtro.finca) &&
       (!q || a.arete.toLowerCase().includes(q) || (a.nombre || '').toLowerCase().includes(q)))
     .sort(porArete);
-  if (!lista.length) return <p class="mut">{Object.keys(db.animales).length ? 'No se encontró ningún animal.' : 'Aún no hay animales. Toque “➕ Agregar un animal”.'}</p>;
+  if (!lista.length) return <p class="mut">{!Object.keys(db.animales).length ? 'Aún no hay animales. Toque “➕ Agregar un animal”.'
+    : q || filtro.finca ? 'No se encontró ningún animal. Revise el número o elija “Todas las fincas”.'
+    : 'No hay animales activos. Los vendidos o muertos se ven con el botón de arriba.'}</p>;
   return <>{lista.map(a => {
     const r = retiro(a), p = prenezAbierta(a);
     return (
       <div class="card item" onClick={() => abrir(a.arete)}>
         <span><b>{a.arete}</b> {a.nombre}<br />
-          <span class="mut">{[a.finca, a.categoria, a.raza, a.tipo === 'leche' ? 'Leche' : 'Carne'].filter(Boolean).join(' · ')} · {a.eventos.length} eventos</span>
+          <span class="mut">{[a.finca, a.categoria, a.raza, a.tipo === 'leche' ? 'Leche' : 'Carne'].filter(Boolean).join(' · ')} · {cuantos(a.eventos.length, 'evento', 'eventos')}</span>
         </span>
         <span>{r ? <span class="tag bad">{r.motivo}</span> : p ? <span class="tag">Preñada · parto {fmt(p.parto)}</span> : null}</span>
       </div>
@@ -138,6 +140,11 @@ function Lista() {
   const pintar = () => cont.replaceChildren(<Tarjetas />);
   return (
     <section>
+      {!Object.keys(db.animales).length && <div class="card">
+        <h2>👋 Hola</h2>
+        <p>Para empezar, toque <b>“➕ Agregar un animal”</b>.</p>
+        <p>Si ya tiene una copia de sus datos, toque <b>“📂 Recuperar una copia”</b>, al final de esta pantalla.</p>
+      </div>}
       <button class="pri grande" onClick={() => ir('escaner')}>📷 Escanear código QR</button>
       <button class="pri grande" onClick={() => abrir(null)}>➕ Agregar un animal</button>
       <button class="grande" onClick={() => ir('reportes')}>📋 Reportes (enviar o imprimir)</button>
@@ -152,9 +159,9 @@ function Lista() {
         <option value="">Todas las fincas</option>
         {fincas(db).map(f => <option>{f}</option>)}
       </select>
-      <button class="grande" onClick={() => { filtro.verRet = !filtro.verRet; render() }}>
+      {Object.values(db.animales).some(retiro) && <button class="grande" onClick={() => { filtro.verRet = !filtro.verRet; render() }}>
         {filtro.verRet ? '🙈 Ocultar animales vendidos o muertos' : '👁️ Ver también animales vendidos o muertos'}
-      </button>
+      </button>}
       <div ref={(el: HTMLElement) => (cont = el)}><Tarjetas /></div>
       <CopiaSeguridad />
     </section>
@@ -175,14 +182,9 @@ function Ficha() {
     for (const k of CAMPOS) (nuevo as any)[k] = val(k);
     db.animales[arete] = nuevo; guardar(db); abrir(arete); avisar('✅ Animal guardado');
   };
-  return (
-    <section>
-      <button onClick={volver}>← Volver</button>
-      {a && <button class="grande" onClick={() => mostrarReporte('ficha')}>📋 Reporte de este animal</button>}
-      {a && <button class="grande" onClick={() => { qrModo = 'animal'; ir('qr') }}>📲 Pasar este animal a otro teléfono (QR)</button>}
-      {a && <button class="grande" onClick={() => { qrModo = 'corral'; ir('qr') }}>🏷️ Código QR para el arete o corral</button>}
+  const formulario = (
       <form class="card" onSubmit={guardarAnimal}>
-        <h2>{a ? 'Datos del animal ' + a.arete : 'Agregar un animal'}</h2>
+        <h2>{a ? 'Cambiar datos del animal ' + a.arete : 'Agregar un animal'}</h2>
         <label for="f-arete">Número de arete (obligatorio)</label>
         <input id="f-arete" name="arete" required inputmode="numeric" value={a?.arete ?? areteNuevo} />
         <label for="f-nombre">Nombre (si tiene)</label>
@@ -208,8 +210,31 @@ function Ficha() {
         </details>
         <button class="pri grande">💾 Guardar animal</button>
       </form>
-      {a && <NuevoEvento a={a} />}
-      {a && <Historial a={a} />}
+  );
+  if (!a) return <section><button onClick={volver}>← Volver</button>{formulario}</section>;
+  // Animal existente: primero lo de todos los días; datos y QR guardados abajo para no cambiarlos sin querer.
+  const p = prenezAbierta(a), r = retiro(a);
+  return (
+    <section>
+      <button onClick={volver}>← Volver</button>
+      <div class="card">
+        <h2 class="titulo-animal">🐄 {a.arete}{a.nombre ? ' · ' + a.nombre : ''}</h2>
+        <p class="mut">{[a.finca, a.categoria, a.raza, a.tipo === 'leche' ? 'Leche' : 'Carne'].filter(Boolean).join(' · ')}</p>
+        {r ? <p class="bad"><b>Salió: {r.motivo} el {fmt(r.fecha)}</b></p>
+          : p ? <p class="warn"><b>Preñada · parto probable {fmt(p.parto)}{p.secado ? ' · secar el ' + fmt(p.secado) : ''}</b></p> : null}
+      </div>
+      {!r && <NuevoEvento a={a} />}
+      <Historial a={a} />
+      <details>
+        <summary>✏️ Cambiar datos del animal</summary>
+        {formulario}
+      </details>
+      <details>
+        <summary>📲 Compartir o imprimir</summary>
+        <button class="grande" onClick={() => mostrarReporte('ficha')}>📋 Reporte de este animal</button>
+        <button class="grande" onClick={() => { qrModo = 'animal'; ir('qr') }}>📲 Pasar este animal a otro teléfono (QR)</button>
+        <button class="grande" onClick={() => { qrModo = 'corral'; ir('qr') }}>🏷️ Código QR para el arete o corral</button>
+      </details>
     </section>
   );
 }
@@ -217,12 +242,17 @@ function Ficha() {
 // Los más comunes como botones grandes; el resto en "Otro".
 const COMUNES: [TipoEvento, string][] = [['monta', '🐂 Monta'], ['parto', '🍼 Parto'], ['secado', '🥛 Secado'], ['celo', '🔥 Celo']];
 
+// Lo menos frecuente, también con botones. Vender, morir o dar de baja son una "salida" (retiro) con su motivo.
+const OTROS: [TipoEvento, string, string?][] = [
+  ['prenez', '✔️ Preñez confirmada'], ['destete', '🐄 Destete'], ['aborto', '❌ Aborto / vacía'],
+  ['retiro', '💰 Vendido', MOTIVOS[0]], ['retiro', '✝️ Murió', MOTIVOS[1]], ['retiro', '📤 Dado de baja', MOTIVOS[2]],
+];
+
 function NuevoEvento({ a }: { a: Animal }) {
-  let tipo!: HTMLInputElement, otroBox!: HTMLElement, motivoBox!: HTMLElement, botones!: HTMLElement;
-  const elegir = (t: string, boton?: HTMLElement) => {
-    tipo.value = t;
-    for (const b of botones.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b === boton));
-    motivoBox.classList.toggle('hide', t !== 'retiro');
+  let tipo!: HTMLInputElement, motivo!: HTMLInputElement, otroBox!: HTMLElement, form!: HTMLElement;
+  const elegir = (t: string, m: string, boton: HTMLElement) => {
+    tipo.value = t; motivo.value = m;
+    for (const b of form.querySelectorAll('.eventos button')) b.setAttribute('aria-pressed', String(b === boton));
   };
   const enviar = (e: Event) => {
     e.preventDefault();
@@ -230,32 +260,25 @@ function NuevoEvento({ a }: { a: Animal }) {
     if (!tipo.value) return alert('Primero toque qué pasó: Monta, Parto, Secado, Celo u Otro.');
     const ev = { id: nuevoId(), tipo: tipo.value as TipoEvento, fecha: val('fecha'), nota: val('nota'), motivo: undefined as string | undefined };
     if (ev.tipo === 'retiro') {
-      if (retiro(a)) return alert('Este animal ya está retirado.');
-      ev.motivo = val('motivo');
-      if (!confirm(`¿Seguro que quiere retirar al animal ${a.arete} por ${ev.motivo}?\n\nYa no aparecerá en la lista.`)) return;
+      ev.motivo = motivo.value;
+      if (!confirm(`¿Seguro? El animal ${a.arete} quedará como: ${ev.motivo}.\n\nYa no aparecerá en la lista de animales.`)) return;
     } else delete ev.motivo;
-    a.eventos.push(ev); guardar(db); render(); avisar('✅ Guardado: ' + EVENTOS[ev.tipo]);
+    a.eventos.push(ev); guardar(db); render(); avisar('✅ Guardado: ' + (ev.motivo ?? EVENTOS[ev.tipo]));
   };
   return (
-    <form class="card" onSubmit={enviar}>
+    <form class="card" onSubmit={enviar} ref={(el: HTMLElement) => (form = el)}>
       <h2>¿Qué pasó con este animal?</h2>
       <input type="hidden" ref={(el: HTMLInputElement) => (tipo = el)} />
-      <div class="eventos" ref={(el: HTMLElement) => (botones = el)}>
+      <input type="hidden" ref={(el: HTMLInputElement) => (motivo = el)} />
+      <div class="eventos">
         {COMUNES.map(([t, texto]) => <button type="button" aria-pressed="false"
-          onClick={(e: Event) => { otroBox.classList.add('hide'); elegir(t, e.currentTarget as HTMLElement) }}>{texto}</button>)}
+          onClick={(e: Event) => { otroBox.classList.add('hide'); elegir(t, '', e.currentTarget as HTMLElement) }}>{texto}</button>)}
         <button type="button" aria-pressed="false" style="grid-column:1/-1"
-          onClick={(e: Event) => { otroBox.classList.remove('hide'); elegir('', e.currentTarget as HTMLElement) }}>➕ Otro (preñez, destete, venta, muerte…)</button>
+          onClick={(e: Event) => { otroBox.classList.remove('hide'); elegir('', '', e.currentTarget as HTMLElement) }}>➕ Otro (preñez, destete, venta, muerte…)</button>
       </div>
-      <div class="hide" ref={(el: HTMLElement) => (otroBox = el)}>
-        <label for="f-otro">¿Cuál?</label>
-        <select id="f-otro" onChange={(e: Event) => { tipo.value = (e.target as HTMLSelectElement).value; motivoBox.classList.toggle('hide', tipo.value !== 'retiro') }}>
-          <option value="">— Elija —</option>
-          {Object.entries(EVENTOS).filter(([k]) => !COMUNES.some(([c]) => c === k)).map(([k, v]) => <option value={k}>{v}</option>)}
-        </select>
-      </div>
-      <div class="hide" ref={(el: HTMLElement) => (motivoBox = el)}>
-        <label for="f-motivo">¿Por qué salió?</label>
-        <select id="f-motivo" name="motivo">{MOTIVOS.map(m => <option>{m}</option>)}</select>
+      <div class="hide eventos" ref={(el: HTMLElement) => (otroBox = el)}>
+        {OTROS.map(([t, texto, m]) => <button type="button" aria-pressed="false"
+          onClick={(e: Event) => elegir(t, m ?? '', e.currentTarget as HTMLElement)}>{texto}</button>)}
       </div>
       <label for="f-fecha">Fecha</label>
       <input id="f-fecha" name="fecha" type="date" required value={hoy()} />
@@ -269,7 +292,6 @@ function NuevoEvento({ a }: { a: Animal }) {
 
 function Historial({ a }: { a: Animal }) {
   const c = (t: TipoEvento) => a.eventos.filter(e => e.tipo === t).length;
-  const p = prenezAbierta(a), r = retiro(a);
   const borrar = (id: string) => {
     if (!confirm('¿Seguro que quiere borrar este evento?\n\nNo se puede deshacer.')) return;
     a.eventos = a.eventos.filter(x => x.id !== id); guardar(db); render(); avisar('✅ Borrado');
@@ -278,13 +300,11 @@ function Historial({ a }: { a: Animal }) {
     <div class="card"><h2>Historial</h2>
       <div class="mut">
         Preñeces: {c('prenez')} · Partos: {c('parto')} · Celos: {c('celo')} · Destetes: {c('destete')} · Secados: {c('secado')}
-        {p && <><br /><b class="warn">Parto probable: {fmt(p.parto)}{p.secado ? ' · Secar el ' + fmt(p.secado) : ''}</b></>}
-        {r && <><br /><b class="bad">Retirado: {r.motivo} el {fmt(r.fecha)}</b></>}
       </div>
       <ul>
         {a.eventos.length ? ordenados(a).reverse().map(e => (
           <li class="ev">
-            <span><b>{EVENTOS[e.tipo]}</b>{e.motivo ? ' · ' + e.motivo : ''}<br />
+            <span><b>{e.tipo === 'retiro' ? 'Salida: ' + e.motivo : EVENTOS[e.tipo]}</b><br />
               <span class="mut">{fmt(e.fecha)}{e.nota ? ' · ' + e.nota : ''}</span></span>
             <button class="borrar" onClick={() => borrar(e.id)}>Borrar</button>
           </li>
@@ -332,7 +352,7 @@ function VerEscaner() {
     <section>
       <button onClick={volver}>← Volver</button>
       <h2>Escanear código QR</h2>
-      <Escaner alLeer={leerQr} />
+      <Escaner alLeer={leerQr} reintentar={render} />
     </section>
   );
 }
