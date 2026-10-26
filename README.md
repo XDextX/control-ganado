@@ -19,7 +19,7 @@ Los datos se guardan **solo en el teléfono** de quien usa la app. No hay servid
 
 ## Comentarios
 
-Dentro de la app, al final de la pantalla principal: **“💬 Enviar comentarios o ideas”**. También puede abrir un reporte en la pestaña *Issues* de este repositorio.
+Dentro de la app, al final de la pantalla principal: **“💬 Enviar comentarios o ideas”**, o escriba a germonram@gmail.com. También puede abrir un reporte en la pestaña *Issues* de este repositorio.
 
 ## Para desarrollar
 
