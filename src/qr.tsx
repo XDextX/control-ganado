@@ -20,7 +20,7 @@ export function ImagenQr({ texto }: { texto: string }) {
   const aviso = <p class="bad"></p> as HTMLElement;
   QRCode.toDataURL(texto, { errorCorrectionLevel: 'L', margin: 2, width: 800 })
     .then(url => (img.src = url))
-    .catch(() => (aviso.textContent = 'Hay demasiados datos para un solo código QR. Use “⚙️ Copia de seguridad → 💾 Guardar una copia” y mándela por WhatsApp.'));
+    .catch(() => (aviso.textContent = 'Hay demasiados datos para un solo código QR. Use “⚙️ Copia de seguridad → 💾 Guardar una copia” y mándela por mensaje.'));
   return <div>{img}{aviso}</div>;
 }
 

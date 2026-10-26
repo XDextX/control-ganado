@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#2f6f3e"/><text x="256" y="340" font-size="280" text-anchor="middle">🐄</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Ícono propio (cabeza de vaca), sin emojis de terceros -->
+  <rect width="512" height="512" rx="96" fill="#2f6f3e"/>
+  <path d="M120 170c-40-6-62 14-60 40 30 10 62 6 86-10z" fill="#f6f4ef"/>
+  <path d="M392 170c40-6 62 14 60 40-30 10-62 6-86-10z" fill="#f6f4ef"/>
+  <path d="M170 128c-6-30 4-50 22-58 4 22 6 40 4 58z" fill="#e8c27a"/>
+  <path d="M342 128c6-30-4-50-22-58-4 22-6 40-4 58z" fill="#e8c27a"/>
+  <path d="M256 112c-70 0-116 44-116 112 0 50 14 90 30 120h172c16-30 30-70 30-120 0-68-46-112-116-112z" fill="#f6f4ef"/>
+  <path d="M190 130c-20 14-40 46-38 84 26-8 52-30 60-70-6-8-14-12-22-14z" fill="#3b3b3b"/>
+  <path d="M300 150c24 4 44 22 50 50-24 4-48-6-60-26 0-10 4-18 10-24z" fill="#3b3b3b"/>
+  <circle cx="206" cy="228" r="14" fill="#1a1a1a"/>
+  <circle cx="306" cy="228" r="14" fill="#1a1a1a"/>
+  <rect x="164" y="300" width="184" height="118" rx="56" fill="#e9a3a8"/>
+  <ellipse cx="216" cy="356" rx="16" ry="20" fill="#9b4b52"/>
+  <ellipse cx="296" cy="356" rx="16" ry="20" fill="#9b4b52"/>
+</svg>

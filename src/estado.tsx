@@ -36,7 +36,7 @@ export function descargar(blob: Blob, nombre: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Abre el menú de compartir del teléfono (donde aparece WhatsApp); en la computadora, descarga el archivo.
+// Abre el menú de compartir del teléfono (donde aparecen las apps de mensajería); en la computadora, descarga el archivo.
 export const puedeCompartir = (f: File) => !!navigator.canShare?.({ files: [f] });
 export async function compartir(file: File, titulo: string): Promise<'compartido' | 'cancelado' | 'descargado'> {
   if (!puedeCompartir(file)) { descargar(file, file.name); return 'descargado' }

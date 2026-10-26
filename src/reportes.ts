@@ -1,4 +1,4 @@
-// Cada reporte es un objeto simple que se pinta igual en pantalla, en PDF (imprimir) y en imagen (WhatsApp).
+// Cada reporte es un objeto simple que se pinta igual en pantalla, en PDF (imprimir) y en imagen (para enviar por mensaje).
 import { Animal, Db, EVENTOS, MOTIVOS, cuantos, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, prenezAbierta, retiro } from './datos';
 
 export interface Seccion { titulo: string; nota: string; cols: string[]; filas: string[][] }

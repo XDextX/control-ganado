@@ -2,9 +2,9 @@ import { h } from '../jsx';
 import { cuantos, diasHasta, fusionar, guardar, hoy, marcarRespaldo, ultimoRespaldo } from '../datos';
 import { avisar, compartir, est, puedeCompartir, render, volver } from '../estado';
 
-// Como texto (.txt): Chrome en Android no deja compartir archivos .json, pero sí .txt. El contenido es el mismo.
+// Como texto (.txt): algunos navegadores de teléfono no dejan compartir archivos .json, pero sí .txt. El contenido es el mismo.
 const archivoCopia = () => new File([JSON.stringify(est.db, null, 1)], `ganado-copia-${hoy()}.txt`, { type: 'text/plain' });
-export const textoCopia = (cuando = '') => puedeCompartir(archivoCopia()) ? `📲 Enviar una copia ${cuando} (WhatsApp)` : `💾 Guardar una copia ${cuando}`;
+export const textoCopia = (cuando = '') => puedeCompartir(archivoCopia()) ? `📲 Enviar una copia ${cuando} (por mensaje)` : `💾 Guardar una copia ${cuando}`;
 
 export async function guardarCopia() {
   const r = await compartir(archivoCopia(), 'Copia de Registro de Ganado');
@@ -26,7 +26,7 @@ export function CopiaSeguridad() {
   return (
     <details open={!Object.keys(est.db.animales).length}>
       <summary>⚙️ Copia de seguridad</summary>
-      <p class="ayuda">Guarde una copia seguido para no perder sus datos si se daña o cambia de teléfono. También sirve para pasar todos los animales a otro teléfono por WhatsApp.</p>
+      <p class="ayuda">Guarde una copia seguido para no perder sus datos si se daña o cambia de teléfono. También sirve para pasar todos los animales a otro teléfono por mensaje.</p>
       <button class="grande" onClick={guardarCopia}>{textoCopia()}</button>
       <button class="grande" onClick={() => archivo.click()}>📂 Recuperar una copia</button>
       <input ref={(el: HTMLInputElement) => (archivo = el)} type="file" accept=".json,.txt,application/json,text/plain" class="hide" onChange={recuperar} />

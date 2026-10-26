@@ -1,6 +1,8 @@
 {
   "name": "Registro de Ganado",
   "short_name": "Ganado",
+  "description": "Registro del ganado por arete: montas, partos, secados y ventas, con avisos. Funciona sin internet.",
+  "categories": ["business", "productivity"],
   "lang": "es",
   "start_url": "./index.html",
   "display": "standalone",

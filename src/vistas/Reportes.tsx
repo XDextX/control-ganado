@@ -23,7 +23,7 @@ export function VerReporte() {
   const r = armar();
   const enviarFoto = () => reporteAImagen(r).toBlob(async blob => {
     const file = new File([blob!], `reporte-${est.repTipo}-${hoy()}.png`, { type: 'image/png' });
-    if (await compartir(file, r.titulo) === 'descargado') alert('Se descargó la imagen del reporte. Puede enviarla por WhatsApp desde sus descargas.');
+    if (await compartir(file, r.titulo) === 'descargado') alert('Se descargó la imagen del reporte. Puede enviarla por mensaje desde sus descargas.');
   }, 'image/png');
   return (
     <section>
@@ -31,7 +31,7 @@ export function VerReporte() {
         <button onClick={() => ir(est.anterior)}>← Volver</button>
         {est.repTipo === 'salidas' && <div><label>Mes</label>
           <input type="month" value={est.mes} onChange={(e: Event) => { est.mes = (e.target as HTMLInputElement).value || hoy().slice(0, 7); render() }} /></div>}
-        <button class="pri grande" onClick={enviarFoto}>📲 Enviar como foto (WhatsApp)</button>
+        <button class="pri grande" onClick={enviarFoto}>📲 Enviar como foto (por mensaje)</button>
         <button class="grande" onClick={() => print()}>🖨️ Guardar PDF / Imprimir</button>
       </div>
       <div id="reporte" class="card">

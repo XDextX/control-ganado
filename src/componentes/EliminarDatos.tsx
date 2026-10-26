@@ -4,7 +4,7 @@ import { avisar, est, volver } from '../estado';
 import { guardarCopia, textoCopia } from './CopiaSeguridad';
 
 // Acción destructiva: advertencia y escribir BORRAR. La confirmación va dentro de la pantalla, no en ventanitas
-// del navegador: el navegador interno de WhatsApp y otras apps puede bloquear confirm()/prompt(), y el autocorrector cambia lo escrito.
+// del navegador: el navegador interno de las apps de mensajería puede bloquear confirm()/prompt(), y el autocorrector cambia lo escrito.
 export function ConfirmarBorrado({ boton, aviso, alConfirmar }: { boton: string; aviso: string; alConfirmar: () => void }) {
   let caja!: HTMLElement, abrirBtn!: HTMLElement, si!: HTMLButtonElement, campo!: HTMLInputElement;
   const mostrar = (ver: boolean) => {

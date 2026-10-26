@@ -3,13 +3,55 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Registro de Ganado</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg">
+<title>Registro de Ganado: control de vacas, partos y secados</title>
+<meta name="description" content="App gratuita y sencilla para llevar el registro del ganado de su finca: aretes, celos, montas, preñeces, partos, destetes, secados y ventas. Avisa partos y secados, funciona sin internet y está pensada para usar en el celular.">
+<link rel="canonical" href="https://xdextx.github.io/control-ganado/">
+<meta name="robots" content="index, follow">
 <meta name="theme-color" content="#2f6f3e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<!-- Vista previa al compartir el enlace -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_CR">
+<meta property="og:site_name" content="Registro de Ganado">
+<meta property="og:title" content="Registro de Ganado: control de vacas, partos y secados">
+<meta property="og:description" content="Lleve el registro de su hato en el celular: aretes, montas, partos, secados y ventas. Funciona sin internet.">
+<meta property="og:url" content="https://xdextx.github.io/control-ganado/">
+<meta property="og:image" content="https://xdextx.github.io/control-ganado/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Registro de Ganado: app para el control del hato">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Registro de Ganado",
+  "url": "https://xdextx.github.io/control-ganado/",
+  "description": "Registro del ganado por arete: celos, montas, preñeces, partos, destetes, secados y salidas, con avisos de parto y secado. Funciona sin internet.",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Cualquiera con navegador web",
+  "inLanguage": "es",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
 </head>
 <body>
-<div id="app"></div>
+<div id="app">
+  <!-- Contenido para buscadores y para quien abra la página sin JavaScript; la app lo reemplaza al cargar. -->
+  <main style="max-width:760px;margin:auto;padding:16px;font-family:system-ui,sans-serif">
+    <h1>Registro de Ganado</h1>
+    <p>App sencilla para llevar el control de su ganado desde el celular, incluso sin señal en el campo.</p>
+    <ul>
+      <li>Registro por número de arete, finca, raza y categoría.</li>
+      <li>Celos, montas o inseminaciones, preñeces, partos, destetes, secados y ventas.</li>
+      <li>Avisos de fecha probable de parto y de secado.</li>
+      <li>Reportes para enviar como foto o guardar en PDF.</li>
+      <li>Copia de seguridad y paso de datos entre teléfonos con código QR.</li>
+    </ul>
+    <p>Sus datos se guardan solo en su teléfono.</p>
+  </main>
+</div>
 <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

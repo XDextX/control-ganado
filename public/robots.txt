@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://xdextx.github.io/control-ganado/sitemap.xml
