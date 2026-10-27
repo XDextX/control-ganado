@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { traslados } from './reportes';
-import { Animal, Db, alertas, anotadoEl, cambiosDesde, diceBorrar, edad, fusionar, prenezAbierta, sumarDias, trasladar } from './datos';
+import { pesajes, traslados } from './reportes';
+import { Animal, Db, alertas, anotadoEl, cambiosDesde, diceBorrar, edad, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
@@ -99,5 +99,50 @@ describe('reporte de traslados', () => {
     expect(r.sub).toBe('2 animales trasladados');
     expect(r.secciones[0].nota).toBe('2 de La Esperanza a El Roble');
     expect(r.secciones[0].filas.map(f => f[1])).toEqual(['X', 'Y']);
+  });
+});
+
+describe('pesajes de leche', () => {
+  it('lee kilos con coma o punto y rechaza lo que no tiene sentido', () => {
+    expect(leerKilos('12,5')).toBe(12.5);
+    expect(leerKilos(' 9 ')).toBe(9);
+    expect(leerKilos('')).toBeUndefined();
+    expect(leerKilos('abc')).toBeNaN();
+    expect(leerKilos('125')).toBeNaN(); // más de MAX_KILOS por ordeño
+  });
+  it('solo cuenta vacas de leche activas de la finca y marca las secas', () => {
+    const db: Db = { animales: {
+      V: { ...vaca('leche', [{ id: '1', tipo: 'parto', fecha: '2026-01-01', nota: '' }]), arete: 'V', finca: 'P', categoria: 'Vaca' },
+      S: { ...vaca('leche', [{ id: '1', tipo: 'parto', fecha: '2025-01-01', nota: '' }, { id: '2', tipo: 'secado', fecha: '2026-08-01', nota: '' }]), arete: 'S', finca: 'P' },
+      T: { ...vaca('leche', []), arete: 'T', finca: 'P', categoria: 'Ternera' },
+      C: { ...vaca('carne', []), arete: 'C', finca: 'P' },
+      O: { ...vaca('leche', []), arete: 'O', finca: 'Otra' },
+    } };
+    expect(vacasDeLeche(db, 'P').map(x => x.a.arete + (x.seca ? '(seca)' : ''))).toEqual(['S(seca)', 'V']);
+  });
+  it('guarda un pesaje por vaca y día, y al volver a guardar lo reemplaza', () => {
+    const db: Db = { animales: { V: { ...vaca('leche', []), arete: 'V' } } };
+    expect(guardarPesajes(db, '2026-10-27', [{ arete: 'V', am: 12.5, pm: 10 }])).toBe(1);
+    guardarPesajes(db, '2026-10-27', [{ arete: 'V', am: 13, pm: 10 }]);
+    expect(db.animales.V.eventos).toHaveLength(1);
+    expect(totalPesaje(pesajeDe(db.animales.V, '2026-10-27')!)).toBe(23);
+    guardarPesajes(db, '2026-10-27', [{ arete: 'V' }]); // borrar los números = quitar el pesaje
+    expect(db.animales.V.eventos).toHaveLength(0);
+  });
+});
+
+describe('reporte de pesajes', () => {
+  it('totales por finca, promedio y cambio contra el pesaje anterior', () => {
+    const db: Db = { animales: {
+      A: { ...vaca('leche', []), arete: 'A', finca: 'P' },
+      B: { ...vaca('leche', []), arete: 'B', finca: 'P' },
+    } };
+    guardarPesajes(db, '2026-10-20', [{ arete: 'A', am: 10, pm: 8 }]);
+    guardarPesajes(db, '2026-10-27', [{ arete: 'A', am: 11, pm: 9 }, { arete: 'B', am: 6, pm: 4 }]);
+    const r = pesajes(db, '2026-10-27');
+    expect(r.sub).toBe('2 vacas pesadas');
+    expect(r.secciones[0].titulo).toBe('P — 30 kg');
+    expect(r.secciones[0].filas[0]).toEqual(['A', '11 kg', '9 kg', '20 kg', '▲ 2 kg']);
+    expect(r.secciones[0].filas[1][4]).toBe('—');
   });
 });

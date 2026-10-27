@@ -1,6 +1,6 @@
 import { h, Fragment } from '../jsx';
-import { hoy } from '../datos';
-import { Reporte, ficha, inventario, partos, reporteAImagen, salidas, traslados } from '../reportes';
+import { fmt, hoy } from '../datos';
+import { Reporte, fechasDePesaje, ficha, inventario, partos, pesajes, reporteAImagen, salidas, traslados } from '../reportes';
 import { compartir, est, ir, mostrarReporte, render, volver } from '../estado';
 
 export function MenuReportes() {
@@ -12,12 +12,13 @@ export function MenuReportes() {
       <button class="grande" onClick={() => mostrarReporte('partos')}>🍼 Próximos partos y secados</button>
       <button class="grande" onClick={() => mostrarReporte('salidas')}>📤 Salidas del mes (ventas, muertes, bajas)</button>
       <button class="grande" onClick={() => mostrarReporte('traslados')}>🚚 Traslados del mes (entre fincas)</button>
+      <button class="grande" onClick={() => mostrarReporte('pesajes')}>🥛 Pesajes de leche</button>
       <p class="mut">El reporte de un solo animal está dentro de la ficha de cada animal.</p>
     </section>
   );
 }
 
-const armar = (): Reporte => est.repTipo === 'ficha' ? ficha(est.actual!) : est.repTipo === 'salidas' ? salidas(est.db, est.mes) : est.repTipo === 'traslados' ? traslados(est.db, est.mes)
+const armar = (): Reporte => est.repTipo === 'ficha' ? ficha(est.actual!) : est.repTipo === 'salidas' ? salidas(est.db, est.mes) : est.repTipo === 'traslados' ? traslados(est.db, est.mes) : est.repTipo === 'pesajes' ? pesajes(est.db, est.fechaPesaje || fechasDePesaje(est.db)[0] || hoy())
   : est.repTipo === 'partos' ? partos(est.db) : inventario(est.db);
 
 export function VerReporte() {
@@ -32,6 +33,10 @@ export function VerReporte() {
         <button onClick={() => ir(est.anterior)}>← Volver</button>
         {(est.repTipo === 'salidas' || est.repTipo === 'traslados') && <div><label>Mes</label>
           <input type="month" value={est.mes} onChange={(e: Event) => { est.mes = (e.target as HTMLInputElement).value || hoy().slice(0, 7); render() }} /></div>}
+        {est.repTipo === 'pesajes' && fechasDePesaje(est.db).length > 0 && <div><label>Fecha del pesaje</label>
+          <select value={est.fechaPesaje || fechasDePesaje(est.db)[0]} onChange={(e: Event) => { est.fechaPesaje = (e.target as HTMLSelectElement).value; render() }}>
+            {fechasDePesaje(est.db).map(f => <option value={f}>{fmt(f)}</option>)}
+          </select></div>}
         <button class="pri grande" onClick={enviarFoto}>📲 Enviar como foto (por mensaje)</button>
         <button class="grande" onClick={() => print()}>🖨️ Guardar PDF / Imprimir</button>
       </div>

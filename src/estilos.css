@@ -60,3 +60,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 /* Casillas grandes para marcar animales */
 label.marcar{display:flex;gap:14px;align-items:center;cursor:pointer;margin:8px 0;font-weight:400;color:var(--fg)}
 label.marcar input{width:32px;height:32px;min-height:0;flex:none}
+/* Planilla de pesaje */
+.pesaje .fila{margin:8px 0 0}
+.pesaje label{margin:0}
+.pesaje .total{float:right;color:var(--acc)}
+.pesaje.seca{opacity:.7}
+input.malo{border-color:var(--bad);background:#fde8e8;color:#1a1a1a}

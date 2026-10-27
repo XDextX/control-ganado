@@ -1,9 +1,9 @@
 // Cada reporte es un objeto simple que se pinta igual en pantalla, en PDF (imprimir) y en imagen (para enviar por mensaje).
-import { Animal, Db, EVENTOS, MOTIVOS, cuantos, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, prenezAbierta, retiro } from './datos';
+import { Animal, Db, EVENTOS, MOTIVOS, cuantos, kilos, pesajeDe, totalPesaje, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, prenezAbierta, retiro } from './datos';
 
 export interface Seccion { titulo: string; nota: string; cols: string[]; filas: string[][] }
 export interface Reporte { titulo: string; sub: string; secciones: Seccion[] }
-export type TipoReporte = 'inventario' | 'partos' | 'salidas' | 'traslados' | 'ficha';
+export type TipoReporte = 'inventario' | 'partos' | 'salidas' | 'traslados' | 'pesajes' | 'ficha';
 
 const activos = (db: Db) => Object.values(db.animales).filter(a => !retiro(a)).sort(porArete);
 const contar = (lista: Animal[]) => {
@@ -41,6 +41,32 @@ export function partos(db: Db): Reporte {
 }
 
 const nombreDelMes = (mes: string) => new Date(mes + '-15T12:00:00Z').toLocaleDateString('es', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+// Fechas con pesaje, de la más nueva a la más vieja.
+export const fechasDePesaje = (db: Db) => [...new Set(Object.values(db.animales).flatMap(a => a.eventos.filter(e => e.tipo === 'pesaje').map(e => e.fecha)))].sort().reverse();
+
+// Pesaje de un día por finca: mañana, tarde, total y cambio contra el pesaje anterior de cada vaca.
+export function pesajes(db: Db, fecha: string): Reporte {
+  const filas = Object.values(db.animales).map(a => ({ a, p: pesajeDe(a, fecha) })).filter(x => x.p)
+    .sort((x, y) => x.a.finca.localeCompare(y.a.finca) || totalPesaje(y.p!) - totalPesaje(x.p!));
+  const porFinca: Record<string, typeof filas> = {};
+  for (const x of filas) (porFinca[x.a.finca || 'Sin finca'] ??= []).push(x);
+  const anterior = (a: Animal) => ordenados(a).filter(e => e.tipo === 'pesaje' && e.fecha < fecha).pop();
+  return {
+    titulo: 'Pesaje de leche del ' + fmt(fecha), sub: filas.length ? cuantos(filas.length, 'vaca pesada', 'vacas pesadas') : 'No hay pesaje en esta fecha.',
+    secciones: Object.keys(porFinca).sort().map(f => {
+      const xs = porFinca[f], suma = xs.reduce((n, x) => n + totalPesaje(x.p!), 0);
+      return {
+        titulo: `${f} — ${kilos(suma)}`, nota: `Promedio por vaca: ${kilos(suma / xs.length)}`,
+        cols: ['Vaca', 'Mañana', 'Tarde', 'Total', 'Cambio'],
+        filas: xs.map(({ a, p }) => {
+          const ant = anterior(a), dif = ant ? totalPesaje(p!) - totalPesaje(ant) : null;
+          return [nombreA(a), kilos(p!.am ?? 0), kilos(p!.pm ?? 0), kilos(totalPesaje(p!)), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
+        }),
+      };
+    }),
+  };
+}
 
 export function traslados(db: Db, mes: string): Reporte {
   const movs = Object.values(db.animales).flatMap(a => a.eventos.filter(e => e.tipo === 'traslado' && e.fecha.startsWith(mes)).map(e => ({ a, e })))
@@ -81,7 +107,7 @@ export function ficha(a: Animal): Reporte {
     secciones: [
       { titulo: 'Datos', nota: '', cols: [], filas: datos },
       { titulo: 'Historial', nota: a.eventos.length ? '' : 'Sin eventos.', cols: ['Fecha', 'Evento', 'Nota'],
-        filas: ordenados(a).reverse().map(e => [fmt(e.fecha), (e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}` : EVENTOS[e.tipo] + (e.motivo ? ' · ' + e.motivo : '')), e.nota]) },
+        filas: ordenados(a).reverse().map(e => [fmt(e.fecha), (e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}` : e.tipo === 'pesaje' ? `Pesaje: ${kilos(totalPesaje(e))}` : EVENTOS[e.tipo] + (e.motivo ? ' · ' + e.motivo : '')), e.nota]) },
     ],
   };
 }

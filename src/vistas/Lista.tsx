@@ -111,6 +111,7 @@ export function Lista() {
       <div class="fila">
         {hay && <button onClick={() => ir('cambios')}>📲 Pasar lo anotado</button>}
         {fincas(db).length > 0 && <button onClick={() => ir('mover')}>🚚 Mover animales</button>}
+        {Object.values(db.animales).some(a => a.tipo === 'leche' && !retiro(a)) && <button onClick={() => ir('pesaje')}>🥛 Pesaje de leche</button>}
         <button onClick={() => ir('reportes')}>📋 Reportes</button>
       </div>
       <AvisoRespaldo />

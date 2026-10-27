@@ -4,7 +4,7 @@ import { Animal, cargar, hoy } from './datos';
 import { TipoReporte } from './reportes';
 import { detenerCamara } from './qr';
 
-export type Vista = 'lista' | 'reportes' | 'reporte' | 'animal' | 'qr' | 'escaner' | 'cambios' | 'mover';
+export type Vista = 'lista' | 'reportes' | 'reporte' | 'animal' | 'qr' | 'escaner' | 'cambios' | 'mover' | 'pesaje';
 
 export const est = {
   db: cargar(),
@@ -18,6 +18,7 @@ export const est = {
   qrModo: 'animal' as 'animal' | 'corral',
   nuevo: {} as Partial<Animal>, // valores iniciales para dar de alta (arete escaneado, datos de una cría)
   criaDe: '', // arete de la madre recién parida: ofrece agregar la cría
+  fechaPesaje: '', // día que muestra el reporte de pesajes ('' = el último)
   cambiosDias: 0, // 0 = hoy, 1 = desde ayer, 6 = últimos 7 días
 };
 

@@ -5,12 +5,13 @@ export const GESTACION = 283, SECADO_ANTES = 60;
 export const EVENTOS = {
   celo: 'Celo (ciclo)', monta: 'Monta / inseminación', prenez: 'Preñez confirmada', parto: 'Parto',
   aborto: 'Aborto / vacía', destete: 'Destete', secado: 'Secado', retiro: 'Retiro (baja/venta/muerte)', traslado: 'Traslado',
+  pesaje: 'Pesaje de leche',
 } as const;
 export type TipoEvento = keyof typeof EVENTOS;
 export const MOTIVOS = ['Venta', 'Muerte', 'Baja (desecho)'];
 export const CATEGORIAS = ['Vaca', 'Novilla / vaquilla', 'Ternera', 'Ternero', 'Novillo', 'Toro'];
 
-export interface Evento { id: string; tipo: TipoEvento; fecha: string; nota: string; motivo?: string; desde?: string; hacia?: string }
+export interface Evento { id: string; tipo: TipoEvento; fecha: string; nota: string; motivo?: string; desde?: string; hacia?: string; am?: number; pm?: number } // am/pm: kilos de leche
 export interface Animal {
   arete: string; nombre: string; tipo: 'leche' | 'carne'; nac: string; finca: string;
   sexo: string; raza: string; categoria: string; notas: string; eventos: Evento[];
@@ -84,6 +85,46 @@ export function trasladar(a: Animal, hacia: string, fecha: string, nota = '') {
 }
 // La finca actual es la del traslado más reciente (si hubo alguno).
 const fincaPorTraslados = (a: Animal) => ordenados(a).filter(e => e.tipo === 'traslado' && e.hacia).pop()?.hacia;
+
+// ---------- Pesajes de leche (kilos, ordeño de mañana y de tarde) ----------
+export const MAX_KILOS = 60; // por ordeño: más que esto casi seguro es un error al escribir
+
+// Vacas de leche que se pesan: hembras activas, vacas o sin categoría. "Seca" si el último secado es después del último parto.
+export function vacasDeLeche(db: Db, finca: string) {
+  return Object.values(db.animales)
+    .filter(a => a.tipo === 'leche' && a.sexo !== 'M' && !retiro(a) && a.finca === finca && (!a.categoria || a.categoria === 'Vaca'))
+    .sort(porArete)
+    .map(a => {
+      const ult = (t: TipoEvento) => ordenados(a).filter(e => e.tipo === t).pop()?.fecha ?? '';
+      return { a, seca: ult('secado') > ult('parto') };
+    });
+}
+// Si por una copia de otro teléfono quedaron dos pesajes del mismo día, vale el último anotado.
+export const pesajeDe = (a: Animal, fecha: string) => ordenados(a).filter(e => e.tipo === 'pesaje' && e.fecha === fecha).pop();
+export const totalPesaje = (e: Evento) => (e.am ?? 0) + (e.pm ?? 0);
+export const kilos = (n: number) => n.toLocaleString('es', { maximumFractionDigits: 1 }) + ' kg';
+
+// Lee lo que se escribe en el cuadro: acepta coma o punto. '' = no se pesó. NaN = no es un número válido.
+export function leerKilos(t: string): number | undefined {
+  t = t.trim().replace(',', '.');
+  if (!t) return undefined;
+  const n = Number(t);
+  return n >= 0 && n <= MAX_KILOS ? Math.round(n * 10) / 10 : NaN;
+}
+
+// Guarda los pesajes de un día. Si la vaca ya tenía pesaje esa fecha, se reemplaza (para poder corregir).
+export function guardarPesajes(db: Db, fecha: string, valores: { arete: string; am?: number; pm?: number }[]) {
+  let n = 0;
+  for (const v of valores) {
+    const a = db.animales[v.arete];
+    if (!a) continue;
+    a.eventos = a.eventos.filter(e => !(e.tipo === 'pesaje' && e.fecha === fecha));
+    if (v.am === undefined && v.pm === undefined) continue;
+    a.eventos.push({ id: nuevoId(), tipo: 'pesaje', fecha, nota: '', am: v.am, pm: v.pm });
+    n++;
+  }
+  return n;
+}
 
 // El id de cada evento empieza con la hora en que se anotó (ver nuevoId): de ahí sale el día en que se registró.
 export const anotadoEl = (e: Evento) => { const t = parseInt(e.id.slice(0, -4), 36); return isNaN(t) ? '' : fechaLocal(new Date(t)) };

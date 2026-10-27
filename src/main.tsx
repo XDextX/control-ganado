@@ -7,8 +7,9 @@ import { Ficha } from './vistas/Ficha';
 import { VerCambios, VerEscaner, VerQr } from './vistas/Codigos';
 import { MenuReportes, VerReporte } from './vistas/Reportes';
 import { Mover } from './vistas/Mover';
+import { Pesaje } from './vistas/Pesaje';
 
-const VISTAS = { lista: Lista, reportes: MenuReportes, reporte: VerReporte, animal: Ficha, qr: VerQr, escaner: VerEscaner, cambios: VerCambios, mover: Mover };
+const VISTAS = { lista: Lista, reportes: MenuReportes, reporte: VerReporte, animal: Ficha, qr: VerQr, escaner: VerEscaner, cambios: VerCambios, mover: Mover, pesaje: Pesaje };
 const raiz = document.getElementById('app')!;
 alPintar(() => raiz.replaceChildren(<Encabezado />, <main>{VISTAS[est.vista]()}</main>));
 

@@ -1,5 +1,5 @@
 import { h } from '../jsx';
-import { Animal, CAMPOS, CATEGORIAS, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, nuevoId, ordenados, prenezAbierta, retiro, trasladar } from '../datos';
+import { Animal, CAMPOS, CATEGORIAS, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, kilos, nuevoId, ordenados, prenezAbierta, retiro, totalPesaje, trasladar } from '../datos';
 import { abrir, avisar, est, ir, mostrarReporte, render, volver } from '../estado';
 import { EliminarAnimal } from '../componentes/EliminarDatos';
 import { NombreYArete } from '../componentes/Arete';
@@ -127,7 +127,7 @@ function Historial({ a }: { a: Animal }) {
       <ul>
         {a.eventos.length ? ordenados(a).reverse().map(e => (
           <li class="ev">
-            <span><b>{e.tipo === 'retiro' ? 'Salida: ' + e.motivo : e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}` : EVENTOS[e.tipo]}</b><br />
+            <span><b>{e.tipo === 'retiro' ? 'Salida: ' + e.motivo : e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}` : e.tipo === 'pesaje' ? `Pesaje: ${kilos(totalPesaje(e))} (☀️ ${kilos(e.am ?? 0)} · 🌙 ${kilos(e.pm ?? 0)})` : EVENTOS[e.tipo]}</b><br />
               <span class="mut">{fmt(e.fecha)}{e.nota ? ' · ' + e.nota : ''}</span></span>
             <button class="borrar" onClick={() => borrar(e.id)}>Borrar</button>
           </li>
@@ -145,6 +145,8 @@ function agregarCria(madre: Animal) {
   abrir(null); est.nuevo = {};
 }
 
+const ultimoPesaje = (a: Animal) => ordenados(a).filter(e => e.tipo === 'pesaje').pop();
+
 export function Ficha() {
   const a = est.actual;
   if (!a) return <section><button onClick={volver}>← Volver</button><Formulario a={null} /></section>;
@@ -158,6 +160,7 @@ export function Ficha() {
         <p class="mut">{[a.finca, a.categoria, a.raza, a.tipo === 'leche' ? 'Leche' : 'Carne'].filter(Boolean).join(' · ')}</p>
         {r ? <p class="bad"><b>Salió: {r.motivo} el {fmt(r.fecha)}</b></p>
           : p ? <p class="warn"><b>Preñada · parto probable {fmt(p.parto)}{p.secado ? ' · secar el ' + fmt(p.secado) : ''}</b></p> : null}
+        {ultimoPesaje(a) && <p>🥛 Último pesaje: <b>{kilos(totalPesaje(ultimoPesaje(a)!))}</b> el {fmt(ultimoPesaje(a)!.fecha)}</p>}
       </div>
       {est.criaDe === a.arete && <div class="card">
         <h2>🍼 ¿Nació una cría?</h2>

@@ -15,6 +15,7 @@ import { Ficha } from './vistas/Ficha';
 import { VerCambios, VerQr } from './vistas/Codigos';
 import { MenuReportes, VerReporte } from './vistas/Reportes';
 import { Mover } from './vistas/Mover';
+import { Pesaje } from './vistas/Pesaje';
 
 // Nada de lo que se toque aquí debe pisar los datos de desarrollo guardados en este navegador.
 Storage.prototype.setItem = () => {};
@@ -27,7 +28,8 @@ const vaca = (arete: string, extra: Partial<Animal> = {}): Animal => ({
 
 function ejemplo(): Db {
   const animales: Db['animales'] = {
-    '999000000049': vaca('999000000049', { nombre: 'Lucera', eventos: [{ id: id(200), tipo: 'monta', fecha: hace(259), nota: 'Toro Pinto' }] }),
+    '999000000049': vaca('999000000049', { nombre: 'Lucera', eventos: [{ id: id(200), tipo: 'monta', fecha: hace(259), nota: 'Toro Pinto' },
+      { id: id(7), tipo: 'pesaje', fecha: hace(7), nota: '', am: 11, pm: 9 }, { id: id(0), tipo: 'pesaje', fecha: hace(0), nota: '', am: 12.5, pm: 10 }] }),
     '999000000050': vaca('999000000050', { nombre: 'Canela', eventos: [{ id: id(280), tipo: 'monta', fecha: hace(280), nota: '' }] }),
     '999000000007': vaca('999000000007', { tipo: 'carne', finca: 'La Esperanza', raza: 'Brahman', categoria: 'Novilla / vaquilla',
       eventos: [{ id: id(3), tipo: 'retiro', fecha: hace(3), nota: 'Subasta', motivo: 'Venta' }] }),
@@ -42,7 +44,7 @@ function ejemplo(): Db {
 // Restablece el estado antes de cada historia, para que no se contaminen entre sí.
 function preparar(cambios: Partial<typeof est> = {}) {
   Object.assign(est, { db: ejemplo(), vista: 'lista', anterior: 'lista', actual: null, filtro: { q: '', finca: '', verRet: false },
-    pagina: 0, repTipo: 'inventario', mes: hace(0).slice(0, 7), qrModo: 'animal', nuevo: {}, criaDe: '', cambiosDias: 0 }, cambios);
+    pagina: 0, repTipo: 'inventario', mes: hace(0).slice(0, 7), qrModo: 'animal', nuevo: {}, criaDe: '', cambiosDias: 0, fechaPesaje: '' }, cambios);
 }
 const animal = (arete: string) => est.db.animales[arete];
 
@@ -65,6 +67,7 @@ const HISTORIAS: Historia[] = [
   { grupo: 'Pantallas', nombre: 'Ficha recién parida (agregar cría)', ver: () => { preparar({ criaDe: '999000000049' }); est.actual = animal('999000000049'); return <Ficha /> } },
   { grupo: 'Pantallas', nombre: 'Ficha de un animal vendido', ver: () => { preparar(); est.actual = animal('999000000007'); return <Ficha /> } },
   { grupo: 'Pantallas', nombre: 'Ficha de un animal trasladado', ver: () => { preparar(); est.actual = animal('999000000008'); return <Ficha /> } },
+  { grupo: 'Pantallas', nombre: 'Pesaje de leche (planilla)', ver: () => { preparar(); return <Pesaje /> } },
   { grupo: 'Pantallas', nombre: 'Mover animales', ver: () => { preparar(); return <Mover /> } },
   { grupo: 'Pantallas', nombre: 'Alta de un animal', ver: () => { preparar(); return <Ficha /> } },
   { grupo: 'Pantallas', nombre: 'Alta de una cría (datos puestos)', ver: () => { preparar({ nuevo: { finca: 'El Roble', tipo: 'leche', raza: 'Jersey', nac: hace(0), notas: 'Cría de 999000000049 (Lucera)' } }); return <Ficha /> } },
@@ -74,6 +77,7 @@ const HISTORIAS: Historia[] = [
   { grupo: 'Pantallas', nombre: 'Menú de reportes', ver: () => { preparar(); return <MenuReportes /> } },
   { grupo: 'Pantallas', nombre: 'Reporte: animales por finca', ver: () => { preparar({ repTipo: 'inventario' }); return <VerReporte /> } },
   { grupo: 'Pantallas', nombre: 'Reporte: traslados del mes', ver: () => { preparar({ repTipo: 'traslados', mes: hace(0).slice(0, 7) }); return <VerReporte /> } },
+  { grupo: 'Pantallas', nombre: 'Reporte: pesaje de leche', ver: () => { preparar({ repTipo: 'pesajes' }); return <VerReporte /> } },
   { grupo: 'Pantallas', nombre: 'Reporte: partos y secados', ver: () => { preparar({ repTipo: 'partos' }); return <VerReporte /> } },
 ];
 
