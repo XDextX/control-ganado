@@ -33,7 +33,7 @@ function leerQr(texto: string) {
     } catch (e) { alert('Este código no es de la app de ganado. ' + (e as Error).message); return ir('lista') }
   }
   if (est.db.animales[l.arete]) return abrir(l.arete);
-  if (confirm(`El arete ${l.arete} no está registrado.\n\n¿Quiere darlo de alta ahora?`)) { est.areteNuevo = l.arete; abrir(null); est.areteNuevo = '' }
+  if (confirm(`El arete ${l.arete} no está registrado.\n\n¿Quiere darlo de alta ahora?`)) { est.nuevo = { arete: l.arete }; abrir(null); est.nuevo = {} }
   else ir('lista');
 }
 

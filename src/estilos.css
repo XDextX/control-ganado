@@ -51,3 +51,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .paginas{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center;margin:12px 0}
 .paginas>span{grid-column:1/-1;order:-1}
 .paginas button.grande{margin:0;text-align:center;padding:14px 8px}
+/* Botones secundarios lado a lado */
+.fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:10px 0}
+.fila button{font-weight:600}
+/* Aretes: los últimos números, que son los que se usan en el campo, más grandes */
+.arete{letter-spacing:.02em}
+.arete b{font-size:1.25em}
+/* Casillas grandes para marcar animales */
+label.marcar{display:flex;gap:14px;align-items:center;cursor:pointer;margin:8px 0;font-weight:400;color:var(--fg)}
+label.marcar input{width:32px;height:32px;min-height:0;flex:none}

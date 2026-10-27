@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Animal, Db, alertas, anotadoEl, cambiosDesde, diceBorrar, edad, fusionar, prenezAbierta, sumarDias } from './datos';
+import { traslados } from './reportes';
+import { Animal, Db, alertas, anotadoEl, cambiosDesde, diceBorrar, edad, fusionar, prenezAbierta, sumarDias, trasladar } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
@@ -65,9 +66,38 @@ describe('importar respaldo', () => {
   });
 });
 
+describe('traslados', () => {
+  it('cambia la finca y deja el traslado en el historial', () => {
+    const a = { ...vaca('carne', []), finca: 'La Esperanza' };
+    trasladar(a, 'El Roble', '2026-10-27', 'en camión');
+    expect(a.finca).toBe('El Roble');
+    expect(a.eventos[0]).toMatchObject({ tipo: 'traslado', desde: 'La Esperanza', hacia: 'El Roble', fecha: '2026-10-27' });
+  });
+  it('un traslado que llega por copia o QR mueve el animal en este teléfono', () => {
+    const aqui: Db = { animales: { X: { ...vaca('carne', []), finca: 'La Esperanza' } } };
+    const otro = { ...vaca('carne', []), finca: 'La Esperanza' };
+    trasladar(otro, 'El Roble', '2026-10-27');
+    fusionar(aqui, { animales: { X: otro } });
+    expect(aqui.animales.X.finca).toBe('El Roble');
+  });
+});
+
 describe('confirmar borrado', () => {
   it('acepta BORRAR aunque el teclado agregue puntos, espacios, minúsculas o tildes', () => {
     for (const t of ['BORRAR', 'borrar', ' Borrar. ', 'Bórrar', 'BORRAR!']) expect(diceBorrar(t)).toBe(true);
     for (const t of ['', 'borra', 'borrar todo', 'no']) expect(diceBorrar(t)).toBe(false);
+  });
+});
+
+describe('reporte de traslados', () => {
+  it('lista los traslados del mes y resume por ruta', () => {
+    const db: Db = { animales: { X: { ...vaca('carne', []), finca: 'La Esperanza' }, Y: { ...vaca('carne', []), arete: 'Y', finca: 'La Esperanza' } } };
+    trasladar(db.animales.X, 'El Roble', '2026-10-05');
+    trasladar(db.animales.Y, 'El Roble', '2026-10-06');
+    trasladar(db.animales.Y, 'La Esperanza', '2026-11-01');
+    const r = traslados(db, '2026-10');
+    expect(r.sub).toBe('2 animales trasladados');
+    expect(r.secciones[0].nota).toBe('2 de La Esperanza a El Roble');
+    expect(r.secciones[0].filas.map(f => f[1])).toEqual(['X', 'Y']);
   });
 });

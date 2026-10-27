@@ -3,7 +3,7 @@ import { Animal, Db, EVENTOS, MOTIVOS, cuantos, diasHasta, edad, fmt, hoy, nombr
 
 export interface Seccion { titulo: string; nota: string; cols: string[]; filas: string[][] }
 export interface Reporte { titulo: string; sub: string; secciones: Seccion[] }
-export type TipoReporte = 'inventario' | 'partos' | 'salidas' | 'ficha';
+export type TipoReporte = 'inventario' | 'partos' | 'salidas' | 'traslados' | 'ficha';
 
 const activos = (db: Db) => Object.values(db.animales).filter(a => !retiro(a)).sort(porArete);
 const contar = (lista: Animal[]) => {
@@ -40,10 +40,27 @@ export function partos(db: Db): Reporte {
   };
 }
 
+const nombreDelMes = (mes: string) => new Date(mes + '-15T12:00:00Z').toLocaleDateString('es', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+export function traslados(db: Db, mes: string): Reporte {
+  const movs = Object.values(db.animales).flatMap(a => a.eventos.filter(e => e.tipo === 'traslado' && e.fecha.startsWith(mes)).map(e => ({ a, e })))
+    .sort((x, y) => x.e.fecha.localeCompare(y.e.fecha) || porArete(x.a, y.a));
+  // Resumen por ruta: "12 de La Esperanza a El Roble".
+  const rutas: Record<string, number> = {};
+  for (const { e } of movs) { const r = `${e.desde || '—'} a ${e.hacia}`; rutas[r] = (rutas[r] || 0) + 1 }
+  return {
+    titulo: 'Traslados de ' + nombreDelMes(mes), sub: cuantos(movs.length, 'animal trasladado', 'animales trasladados'),
+    secciones: [{
+      titulo: '', nota: movs.length ? Object.entries(rutas).map(([r, n]) => `${n} de ${r}`).join(' · ') : 'No se trasladó ningún animal este mes.',
+      cols: ['Fecha', 'Animal', 'De', 'A', 'Nota'], filas: movs.map(({ a, e }) => [fmt(e.fecha), nombreA(a), e.desde || '—', e.hacia ?? '', e.nota]),
+    }],
+  };
+}
+
 export function salidas(db: Db, mes: string): Reporte {
   const sal = Object.values(db.animales).map(a => ({ a, r: retiro(a)! })).filter(x => x.r && x.r.fecha.startsWith(mes))
     .sort((x, y) => x.r.fecha.localeCompare(y.r.fecha));
-  const nombreMes = new Date(mes + '-15T12:00:00Z').toLocaleDateString('es', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const nombreMes = nombreDelMes(mes);
   return {
     titulo: 'Salidas de ' + nombreMes, sub: `${sal.length === 1 ? '1 animal salió' : sal.length + ' animales salieron'}`,
     secciones: [{
@@ -64,7 +81,7 @@ export function ficha(a: Animal): Reporte {
     secciones: [
       { titulo: 'Datos', nota: '', cols: [], filas: datos },
       { titulo: 'Historial', nota: a.eventos.length ? '' : 'Sin eventos.', cols: ['Fecha', 'Evento', 'Nota'],
-        filas: ordenados(a).reverse().map(e => [fmt(e.fecha), EVENTOS[e.tipo] + (e.motivo ? ' · ' + e.motivo : ''), e.nota]) },
+        filas: ordenados(a).reverse().map(e => [fmt(e.fecha), (e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}` : EVENTOS[e.tipo] + (e.motivo ? ' · ' + e.motivo : '')), e.nota]) },
     ],
   };
 }

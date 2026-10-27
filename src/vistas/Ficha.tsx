@@ -1,7 +1,8 @@
 import { h } from '../jsx';
-import { Animal, CAMPOS, CATEGORIAS, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, nuevoId, ordenados, prenezAbierta, retiro } from '../datos';
+import { Animal, CAMPOS, CATEGORIAS, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, nuevoId, ordenados, prenezAbierta, retiro, trasladar } from '../datos';
 import { abrir, avisar, est, ir, mostrarReporte, render, volver } from '../estado';
 import { EliminarAnimal } from '../componentes/EliminarDatos';
+import { NombreYArete } from '../componentes/Arete';
 
 function Formulario({ a }: { a: Animal | null }) {
   const guardarAnimal = (e: Event) => {
@@ -20,27 +21,27 @@ function Formulario({ a }: { a: Animal | null }) {
     <form class="card" onSubmit={guardarAnimal}>
       <h2>{a ? 'Cambiar datos del animal ' + a.arete : 'Agregar un animal'}</h2>
       <label for="f-arete">Número de arete (obligatorio)</label>
-      <input id="f-arete" name="arete" required inputmode="numeric" value={a?.arete ?? est.areteNuevo} />
+      <input id="f-arete" name="arete" required inputmode="numeric" value={a?.arete ?? est.nuevo.arete ?? ''} />
       <label for="f-nombre">Nombre (si tiene)</label>
-      <input id="f-nombre" name="nombre" value={a?.nombre ?? ''} />
+      <input id="f-nombre" name="nombre" value={a?.nombre ?? est.nuevo.nombre ?? ''} />
       <label for="f-finca">Finca</label>
-      <input id="f-finca" name="finca" list="listaFincas" value={a?.finca ?? ''} />
+      <input id="f-finca" name="finca" list="listaFincas" value={a?.finca ?? est.nuevo.finca ?? ''} />
       <datalist id="listaFincas">{fincas(est.db).map(f => <option value={f} />)}</datalist>
-      <details>
+      <details open={!a && !!est.nuevo.nac}>
         <summary>Más datos (opcional)</summary>
         <label for="f-tipo">Tipo</label>
-        <select id="f-tipo" name="tipo" value={a?.tipo ?? 'leche'}><option value="leche">Leche</option><option value="carne">Carne</option></select>
+        <select id="f-tipo" name="tipo" value={a?.tipo ?? est.nuevo.tipo ?? 'leche'}><option value="leche">Leche</option><option value="carne">Carne</option></select>
         <label for="f-nac">Fecha de nacimiento</label>
-        <input id="f-nac" name="nac" type="date" value={a?.nac ?? ''} />
+        <input id="f-nac" name="nac" type="date" value={a?.nac ?? est.nuevo.nac ?? ''} />
         <p class="ayuda">Toque el cuadro para elegir la fecha.</p>
         <label for="f-sexo">Sexo</label>
         <select id="f-sexo" name="sexo" value={a?.sexo || 'H'}><option value="H">Hembra</option><option value="M">Macho</option></select>
         <label for="f-raza">Raza</label>
-        <input id="f-raza" name="raza" value={a?.raza ?? ''} />
+        <input id="f-raza" name="raza" value={a?.raza ?? est.nuevo.raza ?? ''} />
         <label for="f-cat">Categoría</label>
         <select id="f-cat" name="categoria" value={a?.categoria ?? ''}><option value="">—</option>{CATEGORIAS.map(c => <option>{c}</option>)}</select>
         <label for="f-notas">Notas</label>
-        <textarea id="f-notas" name="notas" rows="2" value={a?.notas ?? ''}></textarea>
+        <textarea id="f-notas" name="notas" rows="2" value={a?.notas ?? est.nuevo.notas ?? ''}></textarea>
       </details>
       <button class="pri grande">💾 Guardar animal</button>
     </form>
@@ -54,23 +55,32 @@ const COMUNES: [TipoEvento, string][] = [['monta', '🐂 Monta'], ['parto', '�
 const OTROS: [TipoEvento, string, string?][] = [
   ['prenez', '✔️ Preñez confirmada'], ['destete', '🐄 Destete'], ['aborto', '❌ Aborto / vacía'],
   ['retiro', '💰 Vendido', MOTIVOS[0]], ['retiro', '✝️ Murió', MOTIVOS[1]], ['retiro', '📤 Dado de baja', MOTIVOS[2]],
+  ['traslado', '🚚 Pasó a otra finca'],
 ];
 
 function NuevoEvento({ a }: { a: Animal }) {
-  let tipo!: HTMLInputElement, motivo!: HTMLInputElement, otroBox!: HTMLElement, form!: HTMLElement;
+  let tipo!: HTMLInputElement, motivo!: HTMLInputElement, otroBox!: HTMLElement, form!: HTMLElement, destinoBox!: HTMLElement;
   const elegir = (t: string, m: string, boton: HTMLElement) => {
     tipo.value = t; motivo.value = m;
     for (const b of form.querySelectorAll('.eventos button')) b.setAttribute('aria-pressed', String(b === boton));
+    destinoBox.classList.toggle('hide', t !== 'traslado');
   };
   const enviar = (e: Event) => {
     e.preventDefault();
     const f = e.target as HTMLFormElement, val = (k: string) => (f.elements.namedItem(k) as HTMLInputElement).value.trim();
     if (!tipo.value) return alert('Primero toque qué pasó: Monta, Parto, Secado, Celo u Otro.');
+    if (tipo.value === 'traslado') {
+      const hacia = val('destino');
+      if (!hacia) return alert('Escriba o elija la finca a la que pasó.');
+      if (hacia === a.finca) return alert(`El animal ya está en ${hacia}.`);
+      trasladar(a, hacia, val('fecha'), val('nota')); guardar(est.db); render(); return avisar('✅ Pasó a ' + hacia);
+    }
     const ev = { id: nuevoId(), tipo: tipo.value as TipoEvento, fecha: val('fecha'), nota: val('nota'), motivo: undefined as string | undefined };
     if (ev.tipo === 'retiro') {
       ev.motivo = motivo.value;
       if (!confirm(`¿Seguro? El animal ${a.arete} quedará como: ${ev.motivo}.\n\nYa no aparecerá en la lista de animales.`)) return;
     } else delete ev.motivo;
+    if (ev.tipo === 'parto') est.criaDe = a.arete;
     a.eventos.push(ev); guardar(est.db); render(); avisar('✅ Guardado: ' + (ev.motivo ?? EVENTOS[ev.tipo]));
   };
   return (
@@ -82,11 +92,16 @@ function NuevoEvento({ a }: { a: Animal }) {
         {COMUNES.map(([t, texto]) => <button type="button" aria-pressed="false"
           onClick={(e: Event) => { otroBox.classList.add('hide'); elegir(t, '', e.currentTarget as HTMLElement) }}>{texto}</button>)}
         <button type="button" aria-pressed="false" style="grid-column:1/-1"
-          onClick={(e: Event) => { otroBox.classList.remove('hide'); elegir('', '', e.currentTarget as HTMLElement) }}>➕ Otro (preñez, destete, venta, muerte…)</button>
+          onClick={(e: Event) => { otroBox.classList.remove('hide'); elegir('', '', e.currentTarget as HTMLElement) }}>➕ Otro (preñez, destete, venta, muerte, traslado…)</button>
       </div>
       <div class="hide eventos" ref={(el: HTMLElement) => (otroBox = el)}>
         {OTROS.map(([t, texto, m]) => <button type="button" aria-pressed="false"
           onClick={(e: Event) => elegir(t, m ?? '', e.currentTarget as HTMLElement)}>{texto}</button>)}
+      </div>
+      <div class="hide" ref={(el: HTMLElement) => (destinoBox = el)}>
+        <label for="f-destino">¿A qué finca pasó? (ahora está en {a.finca || 'ninguna'})</label>
+        <input id="f-destino" name="destino" list="listaDestinos" />
+        <datalist id="listaDestinos">{fincas(est.db).filter(f => f !== a.finca).map(f => <option value={f} />)}</datalist>
       </div>
       <label for="f-fecha">Fecha</label>
       <input id="f-fecha" name="fecha" type="date" required value={hoy()} />
@@ -112,7 +127,7 @@ function Historial({ a }: { a: Animal }) {
       <ul>
         {a.eventos.length ? ordenados(a).reverse().map(e => (
           <li class="ev">
-            <span><b>{e.tipo === 'retiro' ? 'Salida: ' + e.motivo : EVENTOS[e.tipo]}</b><br />
+            <span><b>{e.tipo === 'retiro' ? 'Salida: ' + e.motivo : e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}` : EVENTOS[e.tipo]}</b><br />
               <span class="mut">{fmt(e.fecha)}{e.nota ? ' · ' + e.nota : ''}</span></span>
             <button class="borrar" onClick={() => borrar(e.id)}>Borrar</button>
           </li>
@@ -120,6 +135,14 @@ function Historial({ a }: { a: Animal }) {
       </ul>
     </div>
   );
+}
+
+// Alta de la cría con lo que ya se sabe de la madre y del parto.
+function agregarCria(madre: Animal) {
+  const parto = ordenados(madre).reverse().find(e => e.tipo === 'parto');
+  est.nuevo = { finca: madre.finca, tipo: madre.tipo, raza: madre.raza, nac: parto?.fecha ?? hoy(),
+    notas: `Cría de ${madre.arete}${madre.nombre ? ' (' + madre.nombre + ')' : ''}` };
+  abrir(null); est.nuevo = {};
 }
 
 export function Ficha() {
@@ -131,11 +154,16 @@ export function Ficha() {
     <section>
       <button onClick={volver}>← Volver</button>
       <div class="card">
-        <h2 class="titulo-animal">🐄 {a.arete}{a.nombre ? ' · ' + a.nombre : ''}</h2>
+        <h2 class="titulo-animal">🐄 <NombreYArete nombre={a.nombre} arete={a.arete} /></h2>
         <p class="mut">{[a.finca, a.categoria, a.raza, a.tipo === 'leche' ? 'Leche' : 'Carne'].filter(Boolean).join(' · ')}</p>
         {r ? <p class="bad"><b>Salió: {r.motivo} el {fmt(r.fecha)}</b></p>
           : p ? <p class="warn"><b>Preñada · parto probable {fmt(p.parto)}{p.secado ? ' · secar el ' + fmt(p.secado) : ''}</b></p> : null}
       </div>
+      {est.criaDe === a.arete && <div class="card">
+        <h2>🍼 ¿Nació una cría?</h2>
+        <p>Puede agregarla ahora. La finca y la fecha de nacimiento ya van puestas; solo falta su número de arete.</p>
+        <button class="pri grande" onClick={() => agregarCria(a)}>➕ Agregar la cría</button>
+      </div>}
       {!r && <NuevoEvento a={a} />}
       <Historial a={a} />
       <details>

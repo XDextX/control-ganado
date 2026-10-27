@@ -27,7 +27,7 @@ Requiere Node 22 o superior.
 
 ```bash
 npm install
-npm run dev      # servidor local
+npm run dev      # servidor local; catálogo de componentes en /storybook
 npm test         # pruebas
 npm run build    # versión para publicar (carpeta dist/)
 ```

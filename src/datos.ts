@@ -4,13 +4,13 @@ export const GESTACION = 283, SECADO_ANTES = 60;
 
 export const EVENTOS = {
   celo: 'Celo (ciclo)', monta: 'Monta / inseminación', prenez: 'Preñez confirmada', parto: 'Parto',
-  aborto: 'Aborto / vacía', destete: 'Destete', secado: 'Secado', retiro: 'Retiro (baja/venta/muerte)',
+  aborto: 'Aborto / vacía', destete: 'Destete', secado: 'Secado', retiro: 'Retiro (baja/venta/muerte)', traslado: 'Traslado',
 } as const;
 export type TipoEvento = keyof typeof EVENTOS;
 export const MOTIVOS = ['Venta', 'Muerte', 'Baja (desecho)'];
 export const CATEGORIAS = ['Vaca', 'Novilla / vaquilla', 'Ternera', 'Ternero', 'Novillo', 'Toro'];
 
-export interface Evento { id: string; tipo: TipoEvento; fecha: string; nota: string; motivo?: string }
+export interface Evento { id: string; tipo: TipoEvento; fecha: string; nota: string; motivo?: string; desde?: string; hacia?: string }
 export interface Animal {
   arete: string; nombre: string; tipo: 'leche' | 'carne'; nac: string; finca: string;
   sexo: string; raza: string; categoria: string; notas: string; eventos: Evento[];
@@ -77,6 +77,14 @@ export function alertas(db: Db, desde = hoy()) {
   return out.filter(x => diasHasta(x.f, desde) <= 30).sort((x, y) => x.f.localeCompare(y.f));
 }
 
+// Mueve el animal a otra finca y deja el traslado en su historial.
+export function trasladar(a: Animal, hacia: string, fecha: string, nota = '') {
+  a.eventos.push({ id: nuevoId(), tipo: 'traslado', fecha, nota, desde: a.finca, hacia });
+  a.finca = hacia;
+}
+// La finca actual es la del traslado más reciente (si hubo alguno).
+const fincaPorTraslados = (a: Animal) => ordenados(a).filter(e => e.tipo === 'traslado' && e.hacia).pop()?.hacia;
+
 // El id de cada evento empieza con la hora en que se anotó (ver nuevoId): de ahí sale el día en que se registró.
 export const anotadoEl = (e: Evento) => { const t = parseInt(e.id.slice(0, -4), 36); return isNaN(t) ? '' : fechaLocal(new Date(t)) };
 
@@ -105,6 +113,8 @@ export function fusionar(dst: Db, src: unknown) {
     if (!loc) { dst.animales[a.arete] = a; n.animales++; n.eventos += a.eventos.length; continue }
     const ids = new Set(loc.eventos.map(x => x.id));
     for (const ev of a.eventos) if (!ids.has(ev.id)) { loc.eventos.push(ev); n.eventos++ }
+    // Un traslado anotado en otro teléfono también cambia la finca aquí.
+    loc.finca = fincaPorTraslados(loc) ?? loc.finca;
   }
   return n;
 }

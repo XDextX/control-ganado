@@ -4,7 +4,7 @@ import { Animal, cargar, hoy } from './datos';
 import { TipoReporte } from './reportes';
 import { detenerCamara } from './qr';
 
-export type Vista = 'lista' | 'reportes' | 'reporte' | 'animal' | 'qr' | 'escaner' | 'cambios';
+export type Vista = 'lista' | 'reportes' | 'reporte' | 'animal' | 'qr' | 'escaner' | 'cambios' | 'mover';
 
 export const est = {
   db: cargar(),
@@ -16,7 +16,8 @@ export const est = {
   repTipo: 'inventario' as TipoReporte,
   mes: hoy().slice(0, 7),
   qrModo: 'animal' as 'animal' | 'corral',
-  areteNuevo: '',
+  nuevo: {} as Partial<Animal>, // valores iniciales para dar de alta (arete escaneado, datos de una cría)
+  criaDe: '', // arete de la madre recién parida: ofrece agregar la cría
   cambiosDias: 0, // 0 = hoy, 1 = desde ayer, 6 = últimos 7 días
 };
 
@@ -26,7 +27,7 @@ export const alPintar = (f: () => void) => { pintor = f };
 export const render = () => pintor();
 
 export function ir(v: Vista) { detenerCamara(); if (v !== est.vista) est.anterior = est.vista; est.vista = v; render(); scrollTo(0, 0) }
-export function abrir(arete: string | null) { est.actual = arete ? est.db.animales[arete] : null; ir('animal') }
+export function abrir(arete: string | null) { est.criaDe = ''; est.actual = arete ? est.db.animales[arete] : null; ir('animal') }
 export function volver() { est.actual = null; ir('lista') }
 export function mostrarReporte(t: TipoReporte) { est.repTipo = t; ir('reporte') }
 

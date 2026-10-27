@@ -1,25 +1,35 @@
 import { h, Fragment } from '../jsx';
-import { alertas, cuantos, diasHasta, fincas, fmt, porArete, prenezAbierta, retiro } from '../datos';
+import { Animal, alertas, cuantos, diasHasta, fincas, fmt, porArete, prenezAbierta, retiro } from '../datos';
 import { abrir, est, ir, render } from '../estado';
 import { AvisoRespaldo, CopiaSeguridad } from '../componentes/CopiaSeguridad';
 import { EliminarDatos } from '../componentes/EliminarDatos';
 import { Comentarios } from '../componentes/Comentarios';
+import { NombreYArete } from '../componentes/Arete';
 
+// Texto corto de un aviso: "parto en 4 días", "secado atrasado 56 días".
+const textoAviso = (que: string, d: number) => que === 'Secar'
+  ? (d < 0 ? `secado atrasado ${cuantos(-d, 'día', 'días')}` : d === 0 ? 'secar hoy' : `secar en ${cuantos(d, 'día', 'días')}`)
+  : (d < 0 ? `parto atrasado ${cuantos(-d, 'día', 'días')} (¿ya parió?)` : d === 0 ? 'parto hoy' : `parto en ${cuantos(d, 'día', 'días')}`);
+
+// Un renglón por animal, con todo lo que le toca.
 function Alertas() {
   const al = alertas(est.db);
   if (!al.length) return null;
+  const porAnimal = new Map<string, typeof al>();
+  for (const x of al) porAnimal.set(x.a.arete, [...(porAnimal.get(x.a.arete) ?? []), x]);
   return (
-    <div class="card"><h2>⚠️ Próximos 30 días</h2><ul>
-      {al.map(x => {
-        const d = diasHasta(x.f);
-        return (
-          <li class="ev item" onClick={() => abrir(x.a.arete)}>
-            <span><b>{x.que}</b> · {x.a.arete} {x.a.nombre}</span>
-            <span class={d < 0 ? 'bad' : 'warn'}>{fmt(x.f)} ({d < 0 ? 'hace ' + -d : 'en ' + d} días)</span>
+    <div class="card"><h2>⚠️ Próximos 30 días</h2>
+      <p class="ayuda">Toque un animal para anotar lo que pasó.</p>
+      <ul>
+        {[...porAnimal.values()].map(xs => (
+          <li class="ev item" onClick={() => abrir(xs[0].a.arete)}>
+            <span><NombreYArete nombre={xs[0].a.nombre} arete={xs[0].a.arete} /><br />
+              {xs.map((x, i) => { const d = diasHasta(x.f); return <>{i ? ' · ' : ''}<span class={d < 0 ? 'bad' : 'warn'}>{textoAviso(x.que, d)}</span></> })}
+            </span>
           </li>
-        );
-      })}
-    </ul></div>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -39,35 +49,50 @@ function Paginas({ total, cambiar }: { total: number; cambiar: () => void }) {
   );
 }
 
-function Tarjetas({ cambiar }: { cambiar: () => void }) {
-  const { db, filtro } = est, q = filtro.q.trim().toLowerCase();
-  const lista = Object.values(db.animales)
-    .filter(a => (filtro.verRet || !retiro(a)) && (!filtro.finca || a.finca === filtro.finca) &&
-      (!q || a.arete.toLowerCase().includes(q) || (a.nombre || '').toLowerCase().includes(q)))
-    .sort(porArete);
-  if (!lista.length) return <p class="mut">{!Object.keys(db.animales).length ? 'Aún no hay animales. Toque “➕ Agregar un animal”.'
-    : q || filtro.finca ? 'No se encontró ningún animal. Revise el número o elija “Todas las fincas”.'
-    : 'No hay animales activos. Los vendidos o muertos se ven con el botón de arriba.'}</p>;
-  est.pagina = Math.min(est.pagina, Math.ceil(lista.length / POR_PAGINA) - 1);
-  const pagina = lista.slice(est.pagina * POR_PAGINA, (est.pagina + 1) * POR_PAGINA);
-  return <>{pagina.map(a => {
-    const r = retiro(a), p = prenezAbierta(a);
-    return (
+function Tarjeta({ a }: { a: Animal }) {
+  const r = retiro(a), p = prenezAbierta(a);
+  return (
       <div class="card item" onClick={() => abrir(a.arete)}>
-        <span><b>{a.arete}</b> {a.nombre}<br />
+        <span><NombreYArete nombre={a.nombre} arete={a.arete} /><br />
           <span class="mut">{[a.finca, a.categoria, a.raza, a.tipo === 'leche' ? 'Leche' : 'Carne'].filter(Boolean).join(' · ')} · {cuantos(a.eventos.length, 'evento', 'eventos')}</span>
         </span>
         <span>{r ? <span class="tag bad">{r.motivo}</span> : p ? <span class="tag">Preñada · parto {fmt(p.parto)}</span> : null}</span>
       </div>
-    );
-  })}<Paginas total={lista.length} cambiar={cambiar} /></>;
+  );
+}
+
+// Resultados de la búsqueda, justo debajo del buscador (incluye vendidos y todas las fincas: se busca un animal concreto).
+function Resultados() {
+  const q = est.filtro.q.trim().toLowerCase();
+  if (!q) return null;
+  const hallados = Object.values(est.db.animales)
+    .filter(a => a.arete.toLowerCase().includes(q) || (a.nombre || '').toLowerCase().includes(q)).sort(porArete);
+  if (!hallados.length) return <p class="mut">No se encontró ningún animal con “{est.filtro.q.trim()}”. Revise el número.</p>;
+  return <>
+    {hallados.slice(0, POR_PAGINA).map(a => <Tarjeta a={a} />)}
+    {hallados.length > POR_PAGINA && <p class="mut">Hay {hallados.length - POR_PAGINA} más: escriba más números para encontrarlo.</p>}
+  </>;
+}
+
+// Lista completa por finca, con páginas.
+function Tarjetas({ cambiar }: { cambiar: () => void }) {
+  const { db, filtro } = est;
+  const lista = Object.values(db.animales)
+    .filter(a => (filtro.verRet || !retiro(a)) && (!filtro.finca || a.finca === filtro.finca))
+    .sort(porArete);
+  if (!lista.length) return <p class="mut">{!Object.keys(db.animales).length ? 'Aún no hay animales. Toque “➕ Agregar un animal”.'
+    : filtro.finca ? 'No hay animales en esta finca. Elija “Todas las fincas”.'
+    : 'No hay animales activos. Los vendidos o muertos se ven con el botón de arriba.'}</p>;
+  est.pagina = Math.min(est.pagina, Math.ceil(lista.length / POR_PAGINA) - 1);
+  const pagina = lista.slice(est.pagina * POR_PAGINA, (est.pagina + 1) * POR_PAGINA);
+  return <>{pagina.map(a => <Tarjeta a={a} />)}<Paginas total={lista.length} cambiar={cambiar} /></>;
 }
 
 export function Lista() {
   const { db, filtro } = est, hay = Object.keys(db.animales).length > 0;
-  let cont!: HTMLElement;
+  let cont!: HTMLElement, resultados!: HTMLElement;
   const pintar = () => cont.replaceChildren(<Tarjetas cambiar={pintar} />);
-  const filtrar = () => { est.pagina = 0; pintar() }; // al buscar o cambiar de finca, volver a la primera página
+  const filtrar = () => { est.pagina = 0; pintar() }; // al cambiar de finca, volver a la primera página
   return (
     <section>
       {!hay && <div class="card">
@@ -77,14 +102,20 @@ export function Lista() {
       </div>}
       <button class="pri grande" onClick={() => ir('escaner')}>📷 Escanear código QR</button>
       <button class="pri grande" onClick={() => abrir(null)}>➕ Agregar un animal</button>
-      {hay && <button class="grande" onClick={() => ir('cambios')}>📲 Pasar lo anotado a otro teléfono (QR)</button>}
-      <button class="grande" onClick={() => ir('reportes')}>📋 Reportes (enviar o imprimir)</button>
+      {hay && <>
+        <label for="buscar">🔍 Buscar animal (últimos números del arete o nombre)</label>
+        <input id="buscar" type="search" placeholder="Ej.: 6921 o Lucera" value={filtro.q}
+          onInput={(e: Event) => { filtro.q = (e.target as HTMLInputElement).value; resultados.replaceChildren(<Resultados />) }} />
+        <div ref={(el: HTMLElement) => (resultados = el)}><Resultados /></div>
+      </>}
+      <div class="fila">
+        {hay && <button onClick={() => ir('cambios')}>📲 Pasar lo anotado</button>}
+        {fincas(db).length > 0 && <button onClick={() => ir('mover')}>🚚 Mover animales</button>}
+        <button onClick={() => ir('reportes')}>📋 Reportes</button>
+      </div>
       <AvisoRespaldo />
       <Alertas />
       <h2>Mis animales</h2>
-      <label for="buscar">Buscar por arete o nombre</label>
-      <input id="buscar" type="search" placeholder="Ej.: 0441 o Lucera" value={filtro.q}
-        onInput={(e: Event) => { filtro.q = (e.target as HTMLInputElement).value; filtrar() }} />
       <label for="finca">Finca</label>
       <select id="finca" value={filtro.finca} onChange={(e: Event) => { filtro.finca = (e.target as HTMLSelectElement).value; filtrar() }}>
         <option value="">Todas las fincas</option>
