@@ -4,13 +4,16 @@ import { cuantos, fincas, guardar, hoy, porArete, retiro, trasladar } from '../d
 import { avisar, est, render, volver } from '../estado';
 import { NombreYArete } from '../componentes/Arete';
 
-let origen = '';
+let origen = '', categoria = ''; // categoria '' = todas
 const marcados = new Set<string>();
 
 export function Mover() {
   const lista = fincas(est.db);
-  if (!lista.includes(origen)) { origen = lista[0] ?? ''; marcados.clear() }
-  const animales = Object.values(est.db.animales).filter(a => a.finca === origen && !retiro(a)).sort(porArete);
+  if (!lista.includes(origen)) { origen = lista[0] ?? ''; categoria = ''; marcados.clear() }
+  const enFinca = Object.values(est.db.animales).filter(a => a.finca === origen && !retiro(a)).sort(porArete);
+  const categorias = [...new Set(enFinca.map(a => a.categoria || 'Sin categoría'))];
+  // Solo se ven (y se marcan con "Marcar todos") los de la categoría elegida; lo ya marcado en otra categoría se conserva.
+  const animales = enFinca.filter(a => !categoria || (a.categoria || 'Sin categoría') === categoria);
   let boton!: HTMLButtonElement, destino!: HTMLInputElement, fecha!: HTMLInputElement, casillas!: HTMLElement;
 
   const actualizar = () => {
@@ -37,10 +40,13 @@ export function Mover() {
       <button onClick={() => { marcados.clear(); volver() }}>← Volver</button>
       <h2>🚚 Mover animales a otra finca</h2>
       <label for="m-origen">1. ¿De qué finca salen?</label>
-      <select id="m-origen" value={origen} onChange={(e: Event) => { origen = (e.target as HTMLSelectElement).value; marcados.clear(); render() }}>
+      <select id="m-origen" value={origen} onChange={(e: Event) => { origen = (e.target as HTMLSelectElement).value; categoria = ''; marcados.clear(); render() }}>
         {lista.map(f => <option>{f}</option>)}
       </select>
-      <label>2. Marque los animales que se van ({cuantos(animales.length, 'animal', 'animales')} en {origen || 'esta finca'})</label>
+      <label>2. Marque los animales que se van ({cuantos(animales.length, 'animal', 'animales')}{categoria ? ' · ' + categoria : ''} en {origen || 'esta finca'})</label>
+      {categorias.length > 1 && <div class="filtros">
+        {['', ...categorias].map(c => <button aria-pressed={String(categoria === c)} onClick={() => { categoria = c; render() }}>{c || 'Todos'}</button>)}
+      </div>}
       <div class="fila">
         <button onClick={() => marcarTodos(true)}>☑️ Marcar todos</button>
         <button onClick={() => marcarTodos(false)}>⬜ Quitar todos</button>

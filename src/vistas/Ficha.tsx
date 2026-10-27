@@ -1,5 +1,5 @@
 import { h } from '../jsx';
-import { Animal, CAMPOS, CATEGORIAS, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, kilos, nuevoId, ordenados, prenezAbierta, retiro, totalPesaje, trasladar } from '../datos';
+import { Animal, CAMPOS, CATEGORIAS, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, kilos, nuevoId, ordenados, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
 import { abrir, avisar, est, ir, mostrarReporte, render, volver } from '../estado';
 import { EliminarAnimal } from '../componentes/EliminarDatos';
 import { NombreYArete } from '../componentes/Arete';
@@ -113,23 +113,49 @@ function NuevoEvento({ a }: { a: Animal }) {
   );
 }
 
+function borrarEvento(a: Animal, id: string) {
+  if (!confirm('¿Seguro que quiere borrar esto?\n\nNo se puede deshacer.')) return;
+  a.eventos = a.eventos.filter(x => x.id !== id); guardar(est.db); render(); avisar('✅ Borrado');
+}
+
+// Últimos pesajes de la vaca, con flecha de si subió o bajó respecto al anterior.
+function Pesajes({ a }: { a: Animal }) {
+  const todos = ordenados(a).filter(e => e.tipo === 'pesaje');
+  if (!todos.length) return null;
+  const ultimos = todos.slice(-5).reverse();
+  return (
+    <div class="card"><h2>🥛 Pesajes de leche</h2>
+      <ul>
+        {ultimos.map(e => {
+          const ant = todos[todos.indexOf(e) - 1], dif = ant ? totalPesaje(e) - totalPesaje(ant) : 0;
+          return (
+            <li class="ev">
+              <span><b>{kilos(totalPesaje(e))}</b> {dif > 0 ? <span class="ok">▲ {kilos(dif)}</span> : dif < 0 ? <span class="bad">▼ {kilos(-dif)}</span> : null}<br />
+                <span class="mut">{fmt(e.fecha)} · ☀️ {kilos(e.am ?? 0)} · 🌙 {kilos(e.pm ?? 0)}</span></span>
+              <button class="borrar" onClick={() => borrarEvento(a, e.id)}>Borrar</button>
+            </li>
+          );
+        })}
+      </ul>
+      {todos.length > 5 && <p class="ayuda">Mostrando los últimos 5 de {todos.length}. Todos están en el reporte “🥛 Pesajes de leche”.</p>}
+    </div>
+  );
+}
+
 function Historial({ a }: { a: Animal }) {
   const c = (t: TipoEvento) => a.eventos.filter(e => e.tipo === t).length;
-  const borrar = (id: string) => {
-    if (!confirm('¿Seguro que quiere borrar este evento?\n\nNo se puede deshacer.')) return;
-    a.eventos = a.eventos.filter(x => x.id !== id); guardar(est.db); render(); avisar('✅ Borrado');
-  };
+  const eventos = ordenados(a).filter(e => e.tipo !== 'pesaje').reverse(); // los pesajes tienen su propio cuadro
   return (
     <div class="card"><h2>Historial</h2>
       <div class="mut">
         Preñeces: {c('prenez')} · Partos: {c('parto')} · Celos: {c('celo')} · Destetes: {c('destete')} · Secados: {c('secado')}
       </div>
       <ul>
-        {a.eventos.length ? ordenados(a).reverse().map(e => (
+        {eventos.length ? eventos.map(e => (
           <li class="ev">
-            <span><b>{e.tipo === 'retiro' ? 'Salida: ' + e.motivo : e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}` : e.tipo === 'pesaje' ? `Pesaje: ${kilos(totalPesaje(e))} (☀️ ${kilos(e.am ?? 0)} · 🌙 ${kilos(e.pm ?? 0)})` : EVENTOS[e.tipo]}</b><br />
+            <span><b>{textoEvento(e)}</b><br />
               <span class="mut">{fmt(e.fecha)}{e.nota ? ' · ' + e.nota : ''}</span></span>
-            <button class="borrar" onClick={() => borrar(e.id)}>Borrar</button>
+            <button class="borrar" onClick={() => borrarEvento(a, e.id)}>Borrar</button>
           </li>
         )) : <li class="mut">Sin eventos todavía.</li>}
       </ul>
@@ -145,7 +171,6 @@ function agregarCria(madre: Animal) {
   abrir(null); est.nuevo = {};
 }
 
-const ultimoPesaje = (a: Animal) => ordenados(a).filter(e => e.tipo === 'pesaje').pop();
 
 export function Ficha() {
   const a = est.actual;
@@ -168,6 +193,7 @@ export function Ficha() {
         <button class="pri grande" onClick={() => agregarCria(a)}>➕ Agregar la cría</button>
       </div>}
       {!r && <NuevoEvento a={a} />}
+      <Pesajes a={a} />
       <Historial a={a} />
       <details>
         <summary>✏️ Cambiar datos del animal</summary>

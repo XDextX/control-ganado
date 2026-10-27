@@ -1,5 +1,5 @@
 import { h, Fragment } from '../jsx';
-import { Animal, alertas, cuantos, diasHasta, fincas, fmt, porArete, prenezAbierta, retiro } from '../datos';
+import { Animal, alertas, cuantos, diasHasta, edad, estaSeca, fincas, haceCuanto, kilos, porArete, prenezAbierta, retiro, textoEvento, totalPesaje, ultimoEvento, ultimoPesaje } from '../datos';
 import { abrir, est, ir, render } from '../estado';
 import { AvisoRespaldo, CopiaSeguridad } from '../componentes/CopiaSeguridad';
 import { EliminarDatos } from '../componentes/EliminarDatos';
@@ -49,15 +49,24 @@ function Paginas({ total, cambiar }: { total: number; cambiar: () => void }) {
   );
 }
 
+// Tarjeta de un animal: quién es, en qué estado está y qué fue lo último que le pasó.
 function Tarjeta({ a }: { a: Animal }) {
-  const r = retiro(a), p = prenezAbierta(a);
+  const r = retiro(a), p = prenezAbierta(a), ult = ultimoEvento(a), pes = ultimoPesaje(a);
   return (
-      <div class="card item" onClick={() => abrir(a.arete)}>
-        <span><NombreYArete nombre={a.nombre} arete={a.arete} /><br />
-          <span class="mut">{[a.finca, a.categoria, a.raza, a.tipo === 'leche' ? 'Leche' : 'Carne'].filter(Boolean).join(' · ')} · {cuantos(a.eventos.length, 'evento', 'eventos')}</span>
+    <div class="card tarjeta" onClick={() => abrir(a.arete)}>
+      <div class="tarjeta-cabeza">
+        <NombreYArete nombre={a.nombre} arete={a.arete} />
+        <span class="tags">
+          {r && <span class="tag bad">{r.motivo}</span>}
+          {!r && p && <span class="tag warn">Preñada · pare {haceCuanto(p.parto)}</span>}
+          {!r && estaSeca(a) && <span class="tag">Seca</span>}
         </span>
-        <span>{r ? <span class="tag bad">{r.motivo}</span> : p ? <span class="tag">Preñada · parto {fmt(p.parto)}</span> : null}</span>
       </div>
+      <div class="mut">{[a.finca, a.categoria, a.sexo === 'M' ? 'Macho' : '', a.raza, a.tipo === 'leche' ? 'Leche' : 'Carne', edad(a.nac)].filter(Boolean).join(' · ')}</div>
+      {ult && <div>📌 {textoEvento(ult)} · <span class="mut">{haceCuanto(ult.fecha)}</span></div>}
+      {pes && <div>🥛 Último pesaje: {kilos(totalPesaje(pes))} · <span class="mut">{haceCuanto(pes.fecha)}</span></div>}
+      {!ult && !pes && <div class="mut">Sin eventos anotados.</div>}
+    </div>
   );
 }
 

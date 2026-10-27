@@ -4,6 +4,7 @@ import { Reporte, fechasDePesaje, ficha, inventario, partos, pesajes, reporteAIm
 import { compartir, est, ir, mostrarReporte, render, volver } from '../estado';
 
 export function MenuReportes() {
+  verFoto = false; // al elegir otro reporte, empezar por la tabla
   return (
     <section>
       <button onClick={volver}>← Volver</button>
@@ -21,12 +22,27 @@ export function MenuReportes() {
 const armar = (): Reporte => est.repTipo === 'ficha' ? ficha(est.actual!) : est.repTipo === 'salidas' ? salidas(est.db, est.mes) : est.repTipo === 'traslados' ? traslados(est.db, est.mes) : est.repTipo === 'pesajes' ? pesajes(est.db, est.fechaPesaje || fechasDePesaje(est.db)[0] || hoy())
   : est.repTipo === 'partos' ? partos(est.db) : inventario(est.db);
 
+// Vista previa de la foto: true mientras se muestra la imagen exacta que se va a enviar.
+let verFoto = false;
+
 export function VerReporte() {
   const r = armar();
   const enviarFoto = () => reporteAImagen(r).toBlob(async blob => {
     const file = new File([blob!], `reporte-${est.repTipo}-${hoy()}.png`, { type: 'image/png' });
     if (await compartir(file, r.titulo) === 'descargado') alert('Se descargó la imagen del reporte. Puede enviarla por mensaje desde sus descargas.');
   }, 'image/png');
+
+  if (verFoto) return (
+    <section>
+      <button onClick={() => { verFoto = false; render() }}>← Volver al reporte</button>
+      <h2>👁️ Así se verá la foto</h2>
+      <p class="ayuda">Esta es la imagen exacta que se enviará. Si un texto no cabe, termina en “…”.</p>
+      <img class="foto-reporte" alt={'Foto del reporte: ' + r.titulo} src={reporteAImagen(r).toDataURL('image/png')} />
+      <button class="pri grande" onClick={enviarFoto}>📲 Enviar esta foto (por mensaje)</button>
+      <button class="grande" onClick={() => { verFoto = false; render() }}>← Volver al reporte</button>
+    </section>
+  );
+
   return (
     <section>
       <div class="noprint">
@@ -37,8 +53,6 @@ export function VerReporte() {
           <select value={est.fechaPesaje || fechasDePesaje(est.db)[0]} onChange={(e: Event) => { est.fechaPesaje = (e.target as HTMLSelectElement).value; render() }}>
             {fechasDePesaje(est.db).map(f => <option value={f}>{fmt(f)}</option>)}
           </select></div>}
-        <button class="pri grande" onClick={enviarFoto}>📲 Enviar como foto (por mensaje)</button>
-        <button class="grande" onClick={() => print()}>🖨️ Guardar PDF / Imprimir</button>
       </div>
       <div id="reporte" class="card">
         <h2>{r.titulo}</h2><p class="mut">{r.sub}</p>
@@ -50,6 +64,12 @@ export function VerReporte() {
             {s.filas.map(f => <tr>{f.map((c, i) => <td>{!s.cols.length && i === 0 ? <b>{c}</b> : c}</td>)}</tr>)}
           </table>}
         </>)}
+      </div>
+      <div class="noprint">
+        <p class="ayuda">Revise el reporte. Si está bien, envíelo o guárdelo:</p>
+        <button class="grande" onClick={() => { verFoto = true; render(); scrollTo(0, 0) }}>👁️ Ver la foto antes de enviar</button>
+        <button class="pri grande" onClick={enviarFoto}>📲 Enviar como foto (por mensaje)</button>
+        <button class="grande" onClick={() => print()}>🖨️ Guardar PDF / Imprimir</button>
       </div>
     </section>
   );

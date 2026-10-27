@@ -94,14 +94,28 @@ export function vacasDeLeche(db: Db, finca: string) {
   return Object.values(db.animales)
     .filter(a => a.tipo === 'leche' && a.sexo !== 'M' && !retiro(a) && a.finca === finca && (!a.categoria || a.categoria === 'Vaca'))
     .sort(porArete)
-    .map(a => {
-      const ult = (t: TipoEvento) => ordenados(a).filter(e => e.tipo === t).pop()?.fecha ?? '';
-      return { a, seca: ult('secado') > ult('parto') };
-    });
+    .map(a => ({ a, seca: estaSeca(a) }));
 }
+const ultimo = (a: Animal, t: TipoEvento) => ordenados(a).filter(e => e.tipo === t).pop();
+export const estaSeca = (a: Animal) => a.tipo === 'leche' && (ultimo(a, 'secado')?.fecha ?? '') > (ultimo(a, 'parto')?.fecha ?? '');
+export const ultimoPesaje = (a: Animal) => ultimo(a, 'pesaje');
+// Cómo se nombra un evento en pantalla.
+export const textoEvento = (e: Evento) => e.tipo === 'retiro' ? 'Salida: ' + e.motivo
+  : e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}`
+  : e.tipo === 'pesaje' ? `Pesaje: ${kilos(totalPesaje(e))}` : EVENTOS[e.tipo];
+// Último evento de manejo (los pesajes van aparte).
+export const ultimoEvento = (a: Animal) => ordenados(a).filter(e => e.tipo !== 'pesaje').pop();
+// "hoy", "ayer", "hace 5 días", "en 3 días".
+export const haceCuanto = (fecha: string, desde = hoy()) => {
+  const d = -diasHasta(fecha, desde);
+  return d === 0 ? 'hoy' : d === 1 ? 'ayer' : d > 0 ? `hace ${cuantos(d, 'día', 'días')}` : `en ${cuantos(-d, 'día', 'días')}`;
+};
 // Si por una copia de otro teléfono quedaron dos pesajes del mismo día, vale el último anotado.
 export const pesajeDe = (a: Animal, fecha: string) => ordenados(a).filter(e => e.tipo === 'pesaje' && e.fecha === fecha).pop();
-export const totalPesaje = (e: Evento) => (e.am ?? 0) + (e.pm ?? 0);
+export const pesajeAnterior = (a: Animal, fecha: string) => ordenados(a).filter(e => e.tipo === 'pesaje' && e.fecha < fecha).pop();
+// Un ordeño que da más del doble o menos de la mitad que la vez pasada casi siempre es un error al escribir (51 en vez de 15).
+export const esRaro = (n: number | undefined, antes: number | undefined) => !!n && !!antes && (n > antes * 2 || n < antes / 2);
+export const totalPesaje =(e: Evento) => (e.am ?? 0) + (e.pm ?? 0);
 export const kilos = (n: number) => n.toLocaleString('es', { maximumFractionDigits: 1 }) + ' kg';
 
 // Lee lo que se escribe en el cuadro: acepta coma o punto. '' = no se pesó. NaN = no es un número válido.

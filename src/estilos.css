@@ -66,3 +66,20 @@ label.marcar input{width:32px;height:32px;min-height:0;flex:none}
 .pesaje .total{float:right;color:var(--acc)}
 .pesaje.seca{opacity:.7}
 input.malo{border-color:var(--bad);background:#fde8e8;color:#1a1a1a}
+/* Vista previa de la foto del reporte */
+.foto-reporte{display:block;width:100%;border:1px solid var(--line);border-radius:10px;margin:10px 0}
+/* Tarjeta de animal en la lista */
+.tarjeta{cursor:pointer}
+.tarjeta>div{margin-top:4px}
+.tarjeta-cabeza{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.ok{color:var(--acc)}
+/* Pesaje: número muy distinto a la vez pasada, y barra fija para guardar */
+input.raro{border-color:#c98a00;background:#fff4cc;color:#1a1a1a}
+.barra-guardar{position:sticky;bottom:0;background:var(--bg);border-top:2px solid var(--line);padding:8px 0 4px;margin-top:10px;z-index:5}
+.barra-guardar p{margin:0 0 6px}
+.barra-guardar button.grande{margin:0}
+/* Botones de filtro (categoría) */
+.filtros{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.filtros button{min-height:48px;font-weight:600}
+.filtros button[aria-pressed=true]{background:#2f6f3e;color:#fff;border-color:#2f6f3e}

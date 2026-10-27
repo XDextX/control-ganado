@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pesajes, traslados } from './reportes';
-import { Animal, Db, alertas, anotadoEl, cambiosDesde, diceBorrar, edad, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
+import { Animal, Db, alertas, anotadoEl, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
@@ -144,5 +144,15 @@ describe('reporte de pesajes', () => {
     expect(r.secciones[0].titulo).toBe('P — 30 kg');
     expect(r.secciones[0].filas[0]).toEqual(['A', '11 kg', '9 kg', '20 kg', '▲ 2 kg']);
     expect(r.secciones[0].filas[1][4]).toBe('—');
+  });
+});
+
+describe('pesaje: aviso de números raros', () => {
+  it('marca lo que da más del doble o menos de la mitad que la vez pasada', () => {
+    expect(esRaro(51, 15)).toBe(true);
+    expect(esRaro(6, 15)).toBe(true);
+    expect(esRaro(17, 15)).toBe(false);
+    expect(esRaro(12, undefined)).toBe(false); // primer pesaje: nada con qué comparar
+    expect(esRaro(undefined, 15)).toBe(false); // vaca no pesada hoy
   });
 });

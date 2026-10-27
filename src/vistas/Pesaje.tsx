@@ -1,6 +1,6 @@
 // Planilla del día de pesaje: todas las vacas de leche de una finca, con mañana y tarde en kilos.
 import { h, Fragment } from '../jsx';
-import { MAX_KILOS, cuantos, fincas, guardar, guardarPesajes, hoy, kilos, leerKilos, pesajeDe, vacasDeLeche } from '../datos';
+import { Evento, MAX_KILOS, cuantos, esRaro, fincas, fmt, guardar, guardarPesajes, hoy, kilos, leerKilos, pesajeAnterior, pesajeDe, totalPesaje, vacasDeLeche } from '../datos';
 import { avisar, est, mostrarReporte, render, volver } from '../estado';
 import { NombreYArete } from '../componentes/Arete';
 
@@ -14,19 +14,31 @@ export function Pesaje() {
   if (!lista.includes(finca)) finca = lista[0] ?? '';
   fecha ||= hoy();
   const vacas = vacasDeLeche(est.db, finca);
-  const filas: { arete: string; am: HTMLInputElement; pm: HTMLInputElement; total: HTMLElement }[] = [];
+  const filas: { arete: string; am: HTMLInputElement; pm: HTMLInputElement; total: HTMLElement; antes?: Evento }[] = [];
   let resumen!: HTMLElement;
 
   const valor = (i: HTMLInputElement) => { const n = leerKilos(i.value); i.classList.toggle('malo', Number.isNaN(n)); return n };
   const recalcular = () => {
-    let suma = 0, pesadas = 0;
+    let suma = 0, pesadas = 0, raros = 0;
     for (const f of filas) {
       const am = valor(f.am), pm = valor(f.pm);
+      for (const [i, n, antes] of [[f.am, am, f.antes?.am], [f.pm, pm, f.antes?.pm]] as const) {
+        const raro = esRaro(n, antes);
+        i.classList.toggle('raro', raro); raros += +raro;
+      }
       const t = (Number.isNaN(am) ? 0 : am ?? 0) + (Number.isNaN(pm) ? 0 : pm ?? 0);
       f.total.textContent = am === undefined && pm === undefined ? '' : '= ' + kilos(t);
       if (t) { suma += t; pesadas++ }
     }
-    resumen.textContent = pesadas ? `${cuantos(pesadas, 'vaca pesada', 'vacas pesadas')} · total ${kilos(suma)} · promedio ${kilos(suma / pesadas)}` : 'Todavía no hay pesos anotados.';
+    resumen.textContent = (pesadas ? `${cuantos(pesadas, 'vaca pesada', 'vacas pesadas')} · total ${kilos(suma)}` : 'Todavía no hay pesos anotados.')
+      + (raros ? ` · ⚠️ ${cuantos(raros, 'número muy distinto', 'números muy distintos')} a la vez pasada (en amarillo): revíselos` : '');
+  };
+  // La tecla "Siguiente" del teclado pasa al próximo cuadro (mañana → tarde → siguiente vaca).
+  const siguiente = (e: KeyboardEvent) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const todos = filas.flatMap(f => [f.am, f.pm]), i = todos.indexOf(e.target as HTMLInputElement);
+    todos[i + 1] ? todos[i + 1].focus() : (e.target as HTMLInputElement).blur();
   };
   const guardarTodo = () => {
     const malos = filas.filter(f => Number.isNaN(valor(f.am)) || Number.isNaN(valor(f.pm)));
@@ -49,22 +61,27 @@ export function Pesaje() {
         <input id="p-fecha" type="date" value={fecha} onChange={(e: Event) => { fecha = (e.target as HTMLInputElement).value || hoy(); render() }} />
         <p class="ayuda">Anote los kilos de cada ordeño. Deje en blanco la vaca que no se pesó. Si ya había pesaje ese día, aquí aparece para corregirlo.</p>
         {vacas.map(({ a, seca }) => {
-          const p = pesajeDe(a, fecha);
+          const p = pesajeDe(a, fecha), antes = pesajeAnterior(a, fecha);
+          const coma = (n?: number) => String(n ?? '').replace('.', ',');
           let am!: HTMLInputElement, pm!: HTMLInputElement, total!: HTMLElement;
           const fila = (
             <div class={'card pesaje' + (seca ? ' seca' : '')}>
               <div><NombreYArete nombre={a.nombre} arete={a.arete} />{seca && <span class="tag">Seca</span>} <b class="total" ref={(el: HTMLElement) => (total = el)}></b></div>
+              <p class="ayuda">{antes ? `La vez pasada (${fmt(antes.fecha)}): ${kilos(totalPesaje(antes))} — ☀️ ${kilos(antes.am ?? 0)} · 🌙 ${kilos(antes.pm ?? 0)}` : 'Primer pesaje de esta vaca.'}</p>
               <div class="fila">
-                <label>☀️ Mañana (kg)<input inputmode="decimal" value={String(p?.am ?? '').replace('.', ',')} ref={(el: HTMLInputElement) => (am = el)} onInput={recalcular} /></label>
-                <label>🌙 Tarde (kg)<input inputmode="decimal" value={String(p?.pm ?? '').replace('.', ',')} ref={(el: HTMLInputElement) => (pm = el)} onInput={recalcular} /></label>
+                <label>☀️ Mañana (kg)<input inputmode="decimal" enterkeyhint="next" value={coma(p?.am)} ref={(el: HTMLInputElement) => (am = el)} onInput={recalcular} onKeyDown={siguiente} /></label>
+                <label>🌙 Tarde (kg)<input inputmode="decimal" enterkeyhint="next" value={coma(p?.pm)} ref={(el: HTMLInputElement) => (pm = el)} onInput={recalcular} onKeyDown={siguiente} /></label>
               </div>
             </div>
           );
-          filas.push({ arete: a.arete, am, pm, total });
+          filas.push({ arete: a.arete, am, pm, total, antes });
           return fila;
         })}
-        <p class="card"><b ref={(el: HTMLElement) => { resumen = el; queueMicrotask(recalcular) }}></b></p>
-        <button class="pri grande" onClick={guardarTodo}>💾 Guardar pesaje</button>
+        {/* Barra fija abajo: el total y Guardar siempre a la vista, sin bajar hasta el final */}
+        <div class="barra-guardar">
+          <p><b ref={(el: HTMLElement) => { resumen = el; queueMicrotask(recalcular) }}></b></p>
+          <button class="pri grande" onClick={guardarTodo}>💾 Guardar pesaje</button>
+        </div>
       </>}
     </section>
   );
