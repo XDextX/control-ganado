@@ -9,7 +9,7 @@ async function actualizar() {
   const resp = await fetch('./', {cache: 'no-store'});
   if (!resp.ok) return;
   const html = await resp.clone().text();
-  const assets = [...new Set([...html.matchAll(/(?:src|href)="\.?\/?([^"]+\.(?:js|css|json|svg))"/g)].map(m => './' + m[1]))];
+  const assets = [...new Set([...html.matchAll(/(?:src|href)="\.?\/?([^"]+\.(?:js|css|json|svg|png))"/g)].map(m => './' + m[1]))];
   const faltan = [];
   for (const a of assets) if (!await c.match(a, {ignoreVary: true})) faltan.push(a);
   await c.addAll(faltan);
