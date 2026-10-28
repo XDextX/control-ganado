@@ -8,7 +8,7 @@ App web de una sola página, hecha con **Vite + TypeScript + TSX propio** (sin R
 
 ## Empezar
 
-Requiere Node 22 o superior.
+Requiere Node 22.12 o superior.
 
 ```bash
 npm install

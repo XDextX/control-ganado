@@ -23,7 +23,7 @@ Dentro de la app, al final de la pantalla principal: **“💬 Enviar comentario
 
 ## Para desarrollar
 
-Requiere Node 22 o superior.
+Requiere Node 22.12 o superior.
 
 ```bash
 npm install

@@ -18,7 +18,7 @@ La app no tiene servidor ni cuentas: los datos viven en el teléfono (`localStor
 | 6 | Baja | La cámara del escáner seguía encendida al cambiar de app | Corregido |
 | 7 | Baja | Sin política de seguridad de contenido (CSP) | Corregido |
 | 8 | Baja | El registro del service worker podía dejar un error sin atrapar | Corregido |
-| 9 | Crítica (solo desarrollo) | `vitest` 3 depende de versiones vulnerables de `tinypool` y `@vitest/mocker` | **Pendiente: requiere cambio mayor** |
+| 9 | Crítica (solo desarrollo) | `vitest` 3 depende de versiones vulnerables de `tinypool` y `@vitest/mocker` | Corregido (vitest 5) |
 
 ## Detalle
 
@@ -87,7 +87,7 @@ GitHub Pages no permite cabeceras HTTP propias. Por eso la CSP va como `<meta>`,
 
 En navegadores sin service worker (modo privado, navegadores limitados) quedaba un `Uncaught (in promise)`. Ahora se atrapa: la app funciona igual, solo que necesita señal.
 
-### 9. Dependencias de desarrollo vulnerables (pendiente)
+### 9. Dependencias de desarrollo vulnerables (corregido)
 
 `npm audit` reporta 3 vulnerabilidades (2 críticas, 1 moderada), todas en `vitest` 3.2 y sus dependencias:
 - `tinypool` ≤ 2.1.1: contaminación de prototipo que permite ejecutar código.
@@ -95,7 +95,7 @@ En navegadores sin service worker (modo privado, navegadores limitados) quedaba 
 
 **No afectan a la app publicada:** `npm audit --omit=dev` da **0 vulnerabilidades**. Solo se usan al correr las pruebas en la computadora de quien desarrolla.
 
-La corrección exige pasar `vitest` de la versión 3 a la 5, que es un **cambio mayor**. Queda como propuesta para aprobar.
+**Corrección.** Se pasó `vitest` de la versión 3 a la **5.0.5** (cambio mayor, aprobado). No hizo falta cambiar Vite (6.4) ni ninguna prueba: las 24 pasan igual. Después, `npm audit` da **0 vulnerabilidades**, también en desarrollo. `vitest` 5 pide Node 22.12 o superior; la publicación usa Node 22, que cumple.
 
 ## Revisado sin hallazgos
 
