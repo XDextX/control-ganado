@@ -4,7 +4,7 @@ import { Evento, MAX_KILOS, cuantos, esRaro, fincas, fmt, guardar, guardarPesaje
 import { avisar, est, mostrarReporte, render, volver } from '../estado';
 import { NombreYArete } from '../componentes/Arete';
 
-let finca = '', fecha = '';
+let finca = '', fecha = '', elegidaEl = ''; // elegidaEl: día en que se eligió la fecha (la app puede quedar abierta varios días)
 
 // Fincas que tienen vacas de leche para pesar.
 const fincasDeLeche = () => fincas(est.db).filter(f => vacasDeLeche(est.db, f).length);
@@ -12,7 +12,7 @@ const fincasDeLeche = () => fincas(est.db).filter(f => vacasDeLeche(est.db, f).l
 export function Pesaje() {
   const lista = fincasDeLeche();
   if (!lista.includes(finca)) finca = lista[0] ?? '';
-  fecha ||= hoy();
+  if (elegidaEl !== hoy()) { fecha = hoy(); elegidaEl = hoy() }
   const vacas = vacasDeLeche(est.db, finca);
   const filas: { arete: string; am: HTMLInputElement; pm: HTMLInputElement; total: HTMLElement; antes?: Evento }[] = [];
   let resumen!: HTMLElement;

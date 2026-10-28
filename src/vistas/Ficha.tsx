@@ -1,5 +1,5 @@
 import { h } from '../jsx';
-import { Animal, CAMPOS, CATEGORIAS, areteValido, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, kilos, nuevoId, ordenados, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
+import { Animal, CAMPOS, CATEGORIAS, areteValido, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, kilos, nuevoId, ordenados, pesajeDe, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
 import { abrir, avisar, est, ir, mostrarReporte, render, volver } from '../estado';
 import { EliminarAnimal } from '../componentes/EliminarDatos';
 import { NombreYArete } from '../componentes/Arete';
@@ -16,6 +16,8 @@ function Formulario({ a }: { a: Animal | null }) {
     for (const k of CAMPOS) (nuevo as any)[k] = val(k);
     nuevo.creado ??= hoy();
     db.animales[arete] = nuevo; guardar(db); abrir(arete); avisar('✅ Animal guardado');
+    // Los otros teléfonos no saben del cambio: al juntar copias quedaría el animal dos veces.
+    if (a && arete !== a.arete) alert(`El arete cambió de ${a.arete} a ${arete}.\n\nSi este animal también está en otros teléfonos, cámbielo allá igual. Si no, al pasar los datos quedará repetido.`);
   };
   return (
     <form class="card" onSubmit={guardarAnimal}>
@@ -126,7 +128,8 @@ function borrarEvento(a: Animal, id: string, boton: HTMLButtonElement) {
 
 // Últimos pesajes de la vaca, con flecha de si subió o bajó respecto al anterior.
 function Pesajes({ a }: { a: Animal }) {
-  const todos = ordenados(a).filter(e => e.tipo === 'pesaje');
+  // Uno por día: si llegó una corrección desde otro teléfono, vale la última anotada (igual que en el reporte).
+  const todos = ordenados(a).filter(e => e.tipo === 'pesaje' && e === pesajeDe(a, e.fecha));
   if (!todos.length) return null;
   const ultimos = todos.slice(-5).reverse();
   return (

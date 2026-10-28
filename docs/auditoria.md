@@ -97,6 +97,17 @@ En navegadores sin service worker (modo privado, navegadores limitados) quedaba 
 
 **Corrección.** Se pasó `vitest` de la versión 3 a la **5.0.5** (cambio mayor, aprobado). No hizo falta cambiar Vite (6.4) ni ninguna prueba: las 24 pasan igual. Después, `npm audit` da **0 vulnerabilidades**, también en desarrollo. `vitest` 5 pide Node 22.12 o superior; la publicación usa Node 22, que cumple.
 
+## Segunda revisión (independiente)
+
+Errores de datos encontrados después, ya corregidos:
+
+| # | Severidad | Hallazgo | Corrección |
+|---|---|---|---|
+| 10 | Alta | Al recibir una copia o QR, la finca cambiada a mano volvía a la del último traslado aunque no llegara un traslado nuevo | `fusionar` solo cambia la finca si entró un traslado nuevo (con prueba) |
+| 11 | Alta | Con la app abierta varios días, el pesaje seguía con la fecha de ayer y lo reemplazaba | La fecha vuelve a hoy cuando cambia el día |
+| 12 | Media | Cambiar el arete deja el animal repetido en otros teléfonos al juntar copias | Aviso al guardar: cambiarlo también en los otros teléfonos (arreglarlo del todo exigiría cambiar el formato) |
+| 13 | Baja | La ficha mostraba dos pesajes del mismo día tras una corrección en otro teléfono | Un pesaje por día, el último anotado, igual que el reporte |
+
 ## Revisado sin hallazgos
 
 - **Inyección de HTML (XSS):** todo el texto se agrega con `document.createTextNode` (ver `src/jsx.ts`) y no se usa `innerHTML`. Los enlaces de correo y de reporte en el repositorio codifican el texto con `encodeURIComponent`.

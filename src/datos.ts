@@ -214,9 +214,10 @@ export function fusionar(dst: Db, src: unknown) {
     const loc = Object.hasOwn(dst.animales, a.arete) ? dst.animales[a.arete] : undefined;
     if (!loc) { dst.animales[a.arete] = a; n.animales++; n.eventos += a.eventos.length; continue }
     const ids = new Set(loc.eventos.map(x => x.id));
-    for (const ev of a.eventos) if (!ids.has(ev.id)) { loc.eventos.push(ev); n.eventos++ }
-    // Un traslado anotado en otro teléfono también cambia la finca aquí.
-    loc.finca = fincaPorTraslados(loc) ?? loc.finca;
+    let traslado = false;
+    for (const ev of a.eventos) if (!ids.has(ev.id)) { loc.eventos.push(ev); n.eventos++; traslado ||= ev.tipo === 'traslado' }
+    // Un traslado nuevo anotado en otro teléfono también cambia la finca aquí. Sin traslado nuevo, se respeta la finca de este teléfono.
+    if (traslado) loc.finca = fincaPorTraslados(loc) ?? loc.finca;
   }
   return n;
 }

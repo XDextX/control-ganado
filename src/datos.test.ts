@@ -80,6 +80,13 @@ describe('traslados', () => {
     fusionar(aqui, { animales: { X: otro } });
     expect(aqui.animales.X.finca).toBe('El Roble');
   });
+  it('sin traslado nuevo, respeta la finca que se cambió a mano en este teléfono', () => {
+    const aqui: Db = { animales: { X: { ...vaca('carne', []), finca: 'La Esperanza' } } };
+    trasladar(aqui.animales.X, 'Norte', '2026-10-01');
+    aqui.animales.X.finca = 'Sur'; // corregida en "Cambiar datos del animal"
+    fusionar(aqui, JSON.parse(JSON.stringify({ animales: { X: { ...aqui.animales.X, eventos: [...aqui.animales.X.eventos, { id: 'zz1', tipo: 'celo', fecha: '2026-10-20', nota: '' }] } } })));
+    expect(aqui.animales.X.finca).toBe('Sur');
+  });
 });
 
 describe('confirmar borrado', () => {
