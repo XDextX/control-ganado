@@ -1,7 +1,7 @@
 // Pantallas de códigos QR: mostrar el de un animal o del corral, pasar lo anotado y escanear.
 import { h, Fragment } from '../jsx';
-import { cambiosDesde, cuantos, fusionar, guardar, hoy, sumarDias } from '../datos';
-import { abrir, est, ir, render, volver } from '../estado';
+import { areteValido, cambiosDesde, cuantos, fusionar, guardar, hoy, sumarDias } from '../datos';
+import { abrir, avisar, est, ir, render, volver } from '../estado';
 import { Escaner, ImagenQr, interpretar, qrDeAnimal, qrDeDatos } from '../qr';
 
 export function VerQr() {
@@ -27,14 +27,16 @@ function leerQr(texto: string) {
   if (l.tipo === 'animal') {
     try {
       const n = fusionar(est.db, l.datos); guardar(est.db);
-      alert(`Listo. Se agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}.\n\nNo se borró nada.`);
-      const aretes = Object.keys((l.datos as { animales: object }).animales);
-      return aretes.length === 1 ? abrir(aretes[0]) : volver();
+      alert(`Listo. Se agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}.\n\nNo se borró nada.${n.descartados ? (n.descartados === 1 ? '\n\nSe ignoró 1 dato dañado que venía mal escrito.' : `\n\nSe ignoraron ${n.descartados} datos dañados que venían mal escritos.`) : ''}`);
+      const aretes = Object.values((l.datos as { animales: Record<string, { arete: string }> }).animales).map(a => a.arete.trim());
+      return aretes.length === 1 && Object.hasOwn(est.db.animales, aretes[0]) ? abrir(aretes[0]) : volver();
     } catch (e) { alert('Este código no es de la app de ganado. ' + (e as Error).message); return ir('lista') }
   }
-  if (est.db.animales[l.arete]) return abrir(l.arete);
-  if (confirm(`El arete ${l.arete} no está registrado.\n\n¿Quiere darlo de alta ahora?`)) { est.nuevo = { arete: l.arete }; abrir(null); est.nuevo = {} }
-  else ir('lista');
+  if (!areteValido(l.arete)) { alert('Este código QR no es de un arete ni de la app de ganado.'); return ir('lista') }
+  if (Object.hasOwn(est.db.animales, l.arete)) return abrir(l.arete);
+  // Arete nuevo: se abre el alta ya con el número puesto (si no quiere, toca Volver). Sin ventanita de confirmación.
+  est.nuevo = { arete: l.arete.trim() }; abrir(null); est.nuevo = {};
+  avisar(`Arete ${l.arete.trim()} no registrado: complete el alta`);
 }
 
 export function VerEscaner() {

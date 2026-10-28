@@ -20,9 +20,50 @@ export interface Animal {
 export interface Db { animales: Record<string, Animal> }
 export const CAMPOS = ['arete', 'nombre', 'tipo', 'nac', 'finca', 'sexo', 'raza', 'categoria', 'notas'] as const;
 
+// ---------- Validación de lo que entra (copias, QR y lo guardado) ----------
+// Un dato dañado o malicioso no debe poder romper la app: lo que no tiene forma válida se descarta.
+const RESERVADOS = new Set(['__proto__', 'constructor', 'prototype']);
+export const areteValido = (s: unknown): s is string => typeof s === 'string' && !!s.trim() && s.trim().length <= 40 && !RESERVADOS.has(s.trim());
+const esFecha = (s: unknown): s is string => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+const texto = (v: unknown, max: number) => typeof v === 'string' ? v.slice(0, max) : '';
+const kilosValidos = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= MAX_KILOS ? v : undefined;
+
+export function limpiarEvento(e: any): Evento | null {
+  if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !e.id || !Object.hasOwn(EVENTOS, e.tipo) || !esFecha(e.fecha)) return null;
+  const ev: Evento = { id: e.id.slice(0, 40), tipo: e.tipo, fecha: e.fecha, nota: texto(e.nota, 500) };
+  if (e.motivo != null) ev.motivo = texto(e.motivo, 60);
+  if (e.desde != null) ev.desde = texto(e.desde, 80);
+  if (e.hacia != null) ev.hacia = texto(e.hacia, 80);
+  if (e.am != null) ev.am = kilosValidos(e.am);
+  if (e.pm != null) ev.pm = kilosValidos(e.pm);
+  return ev;
+}
+
+export function limpiarAnimal(a: any): { animal: Animal; descartados: number } | null {
+  if (!a || typeof a !== 'object' || !areteValido(a.arete) || !Array.isArray(a.eventos)) return null;
+  const eventos = a.eventos.map(limpiarEvento).filter((e: Evento | null): e is Evento => !!e);
+  const animal: Animal = {
+    arete: a.arete.trim(), nombre: texto(a.nombre, 80), tipo: a.tipo === 'carne' ? 'carne' : 'leche', nac: esFecha(a.nac) ? a.nac : '',
+    finca: texto(a.finca, 80), sexo: a.sexo === 'M' ? 'M' : 'H', raza: texto(a.raza, 80), categoria: texto(a.categoria, 40),
+    notas: texto(a.notas, 1000), eventos,
+  };
+  if (esFecha(a.creado)) animal.creado = a.creado;
+  return { animal, descartados: a.eventos.length - eventos.length };
+}
+
 export function cargar(): Db {
-  try { return JSON.parse(localStorage.getItem(KEY)!) || { animales: {} } }
-  catch { alert('No se pudieron leer los datos guardados. Importe un respaldo.'); return { animales: {} } }
+  const db: Db = { animales: {} };
+  let crudo: string | null = null;
+  try {
+    crudo = localStorage.getItem(KEY);
+    const datos = crudo ? JSON.parse(crudo) : null;
+    for (const v of Object.values(datos?.animales ?? {})) { const l = limpiarAnimal(v); if (l) db.animales[l.animal.arete] = l.animal }
+  } catch {
+    // Se guarda lo ilegible aparte antes de seguir: el próximo guardado no debe borrar lo único que había.
+    try { if (crudo) localStorage.setItem(KEY + '.danado-' + Date.now(), crudo) } catch { /* sin espacio */ }
+    alert('No se pudieron leer los datos guardados. Quedó una copia aparte en el teléfono. Recupere su copia de seguridad.');
+  }
+  return db;
 }
 export function guardar(db: Db) {
   try { localStorage.setItem(KEY, JSON.stringify(db)) }
@@ -160,11 +201,17 @@ export function cambiosDesde(db: Db, desde: string): Db {
 // shortcut: un evento borrado reaparece si otro respaldo aún lo tiene; añadir "borrados" si estorba.
 export function fusionar(dst: Db, src: unknown) {
   const s = src as Db;
-  if (!s || typeof s.animales !== 'object') throw new Error('no es un respaldo de ganado');
-  const n = { animales: 0, eventos: 0 };
-  for (const [k, a] of Object.entries(s.animales)) {
-    if (!a || !Array.isArray(a.eventos) || typeof a.arete !== 'string') throw new Error('animal mal formado: ' + k);
-    const loc = dst.animales[a.arete];
+  if (!s || typeof s !== 'object' || !s.animales || typeof s.animales !== 'object') throw new Error('no es un respaldo de ganado');
+  const n = { animales: 0, eventos: 0, descartados: 0 };
+  // Primero se revisa todo: si un animal está mal, no se importa nada (nunca una copia a medias).
+  const limpios = Object.entries(s.animales).map(([k, v]) => {
+    const l = limpiarAnimal(v);
+    if (!l) throw new Error('animal mal formado: ' + String(k).slice(0, 40));
+    n.descartados += l.descartados;
+    return l.animal;
+  });
+  for (const a of limpios) {
+    const loc = Object.hasOwn(dst.animales, a.arete) ? dst.animales[a.arete] : undefined;
     if (!loc) { dst.animales[a.arete] = a; n.animales++; n.eventos += a.eventos.length; continue }
     const ids = new Set(loc.eventos.map(x => x.id));
     for (const ev of a.eventos) if (!ids.has(ev.id)) { loc.eventos.push(ev); n.eventos++ }

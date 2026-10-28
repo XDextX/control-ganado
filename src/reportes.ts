@@ -127,8 +127,11 @@ export function reporteAImagen(r: Reporte): HTMLCanvasElement {
     x.fillStyle = '#fff'; x.font = F(700, 50); x.fillText(corta('🐄 ' + r.titulo, W - 2 * P), P, 80);
     x.font = F(400, 30); x.fillText(r.sub, P, 125);
   });
-  let y = 200;
-  for (const s of r.secciones) {
+  // Los teléfonos no dibujan imágenes gigantes (iPhone: ~16 millones de puntos). Si no cabe, se corta con una nota.
+  const MAX_ALTO = 12000;
+  let y = 200, faltan = 0;
+  secciones: for (const [si, s] of r.secciones.entries()) {
+    if (y > MAX_ALTO - 300) { faltan += r.secciones.slice(si).reduce((n, x) => n + x.filas.length, 0); break }
     if (s.titulo) { const yy = y; pasos.push(() => { x.fillStyle = '#2f6f3e'; x.font = F(700, 38); x.fillText(corta(s.titulo, W - 2 * P), P, yy) }); y += 56 }
     if (s.nota) { const yy = y; pasos.push(() => { x.fillStyle = '#333'; x.font = F(400, 30); x.fillText(corta(s.nota, W - 2 * P), P, yy) }); y += 50 }
     if (!s.filas.length) continue;
@@ -137,7 +140,11 @@ export function reporteAImagen(r: Reporte): HTMLCanvasElement {
     const n = filas[0].length, anchos = Array.from({ length: n }, (_, i) => Math.max(...filas.map(f => x.measureText(f[i] ?? '').width)) + 28);
     let sobra = W - 2 * P - anchos.reduce((a, b) => a + b, 0);
     for (let i = n - 1; sobra < 0 && i > 0; i--) { const quita = Math.min(-sobra, anchos[i] - 120); if (quita > 0) { anchos[i] -= quita; sobra += quita } }
-    filas.forEach((f, k) => {
+    for (const [k, f] of filas.entries()) {
+      if (y > MAX_ALTO - 150) {
+        faltan += filas.length - k + r.secciones.slice(si + 1).reduce((n, x) => n + x.filas.length, 0);
+        break secciones;
+      }
       const yy = y, cab = s.cols.length > 0 && k === 0;
       pasos.push(() => {
         if (k % 2 === (s.cols.length ? 1 : 0)) { x.fillStyle = '#eef6ef'; x.fillRect(P - 10, yy - 34, W - 2 * P + 20, LH) }
@@ -145,8 +152,13 @@ export function reporteAImagen(r: Reporte): HTMLCanvasElement {
         f.forEach((t, i) => { x.fillStyle = '#111'; x.font = F(cab || (!s.cols.length && i === 0) ? 700 : 400, 30); x.fillText(corta(t ?? '', anchos[i] - 20), xx, yy); xx += anchos[i] });
       });
       y += LH;
-    });
+    }
     y += 30;
+  }
+  if (faltan) {
+    const yy = y + 10;
+    pasos.push(() => { x.fillStyle = '#a32020'; x.font = F(700, 32); x.fillText(corta(`… y ${faltan} filas más: use “Guardar PDF” para verlo completo.`, W - 2 * P), P, yy) });
+    y += 70;
   }
   c.width = W; c.height = y + 20;
   x.fillStyle = '#fff'; x.fillRect(0, 0, W, c.height);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pesajes, traslados } from './reportes';
-import { Animal, Db, alertas, anotadoEl, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
+import { Animal, Db, alertas, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
@@ -43,7 +43,7 @@ describe('lo anotado desde una fecha', () => {
     expect(d.animales.X.eventos.map(e => e.tipo)).toEqual(['monta']);
     expect('nombre' in d.animales.X).toBe(false); // campos vacíos fuera, para que quepa en el QR
     const otro: Db = { animales: {} };
-    expect(fusionar(otro, d)).toEqual({ animales: 2, eventos: 1 });
+    expect(fusionar(otro, d)).toEqual({ animales: 2, eventos: 1, descartados: 0 });
   });
   it('los ids viejos o raros no rompen nada', () => {
     expect(anotadoEl({ id: 'zz', tipo: 'celo', fecha: '2026-01-01', nota: '' })).toBe('');
@@ -56,7 +56,7 @@ describe('importar respaldo', () => {
     const n = fusionar(db, { animales: {
       X: { ...vaca('leche', [{ id: '1', tipo: 'celo', fecha: '2026-01-01', nota: '' }, { id: '2', tipo: 'monta', fecha: '2026-01-02', nota: '' }]), nombre: 'otro' },
       Y: { ...vaca('carne', []), arete: 'Y' } } });
-    expect(n).toEqual({ animales: 1, eventos: 1 });
+    expect(n).toEqual({ animales: 1, eventos: 1, descartados: 0 });
     expect(db.animales.X.eventos).toHaveLength(2);
     expect(db.animales.X.nombre).toBe('');
   });
@@ -154,5 +154,36 @@ describe('pesaje: aviso de números raros', () => {
     expect(esRaro(17, 15)).toBe(false);
     expect(esRaro(12, undefined)).toBe(false); // primer pesaje: nada con qué comparar
     expect(esRaro(undefined, 15)).toBe(false); // vaca no pesada hoy
+  });
+});
+
+describe('seguridad: lo que entra por copia o QR', () => {
+  it('descarta eventos dañados en vez de dejar la app sin abrir', () => {
+    const db: Db = { animales: {} };
+    const n = fusionar(db, { animales: { X: { arete: 'X', tipo: 'leche', eventos: [
+      { id: '1', tipo: 'monta' }, { id: '2', tipo: 'inventado', fecha: '2026-01-01' }, { id: '3', tipo: 'celo', fecha: '2026-01-05', nota: 'ok' }] } } });
+    expect(n.descartados).toBe(2);
+    expect(db.animales.X.eventos.map(e => e.id)).toEqual(['3']);
+    expect(() => alertas(db)).not.toThrow();
+  });
+  it('rechaza aretes reservados sin tocar el objeto de datos', () => {
+    const db: Db = { animales: {} };
+    expect(() => fusionar(db, JSON.parse('{"animales":{"a":{"arete":"__proto__","eventos":[]}}}'))).toThrow('mal formado');
+    expect(Object.getPrototypeOf(db.animales)).toBe(Object.prototype);
+    expect(Object.keys(db.animales)).toEqual([]);
+  });
+  it('si un animal está mal, no importa nada (nunca una copia a medias)', () => {
+    const db: Db = { animales: {} };
+    expect(() => fusionar(db, { animales: { A: { arete: 'A', eventos: [] }, B: { arete: '', eventos: [] } } })).toThrow();
+    expect(db.animales).toEqual({});
+  });
+  it('limpia tipos raros: textos muy largos, kilos imposibles, campos que no son texto', () => {
+    const l = limpiarAnimal({ arete: ' 77 ', nombre: { malo: 1 }, tipo: 'cualquiera', notas: 'x'.repeat(5000),
+      eventos: [{ id: 'p', tipo: 'pesaje', fecha: '2026-01-01', nota: '', am: 9999, pm: 10 }] })!;
+    expect(l.animal.arete).toBe('77');
+    expect(l.animal.nombre).toBe('');
+    expect(l.animal.tipo).toBe('leche');
+    expect(l.animal.notas).toHaveLength(1000);
+    expect(l.animal.eventos[0]).toMatchObject({ am: undefined, pm: 10 });
   });
 });

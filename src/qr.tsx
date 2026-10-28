@@ -46,7 +46,15 @@ export function Escaner({ alLeer, reintentar }: { alLeer: (texto: string) => voi
   if (!navigator.mediaDevices?.getUserMedia) msg.textContent = 'Este teléfono o navegador no permite usar la cámara aquí.';
   else navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(stream => {
     let vivo = true;
-    detener = () => { vivo = false; stream.getTracks().forEach(t => t.stop()); detener = null };
+    // Si cambia de app o apaga la pantalla, la cámara se apaga (no queda filmando en segundo plano).
+    const alOcultar = () => {
+      if (!document.hidden) return;
+      detenerCamara(); video.remove();
+      msg.replaceChildren(<div class="card"><p>La cámara se apagó al salir de la app.</p>
+        <button class="pri grande" onClick={reintentar}>📷 Encender la cámara otra vez</button></div>);
+    };
+    document.addEventListener('visibilitychange', alOcultar);
+    detener = () => { vivo = false; stream.getTracks().forEach(t => t.stop()); document.removeEventListener('visibilitychange', alOcultar); detener = null };
     video.srcObject = stream; video.play();
     const paso = () => {
       if (!vivo) return;

@@ -1,5 +1,5 @@
 import { h } from '../jsx';
-import { Animal, CAMPOS, CATEGORIAS, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, kilos, nuevoId, ordenados, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
+import { Animal, CAMPOS, CATEGORIAS, areteValido, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, kilos, nuevoId, ordenados, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
 import { abrir, avisar, est, ir, mostrarReporte, render, volver } from '../estado';
 import { EliminarAnimal } from '../componentes/EliminarDatos';
 import { NombreYArete } from '../componentes/Arete';
@@ -9,7 +9,7 @@ function Formulario({ a }: { a: Animal | null }) {
     e.preventDefault();
     const { db } = est, f = e.target as HTMLFormElement, val = (k: string) => (f.elements.namedItem(k) as HTMLInputElement).value.trim();
     const arete = val('arete');
-    if (!arete) return;
+    if (!areteValido(arete)) return alert('Ese número de arete no es válido. Use hasta 40 letras o números.');
     if (arete !== a?.arete && db.animales[arete]) return alert('Ya existe un animal con el arete ' + arete);
     const nuevo = a ?? ({ eventos: [] } as unknown as Animal);
     if (a && arete !== a.arete) delete db.animales[a.arete];
@@ -59,11 +59,14 @@ const OTROS: [TipoEvento, string, string?][] = [
 ];
 
 function NuevoEvento({ a }: { a: Animal }) {
-  let tipo!: HTMLInputElement, motivo!: HTMLInputElement, otroBox!: HTMLElement, form!: HTMLElement, destinoBox!: HTMLElement;
+  let tipo!: HTMLInputElement, motivo!: HTMLInputElement, otroBox!: HTMLElement, form!: HTMLElement, destinoBox!: HTMLElement, guardarBtn!: HTMLElement;
   const elegir = (t: string, m: string, boton: HTMLElement) => {
     tipo.value = t; motivo.value = m;
     for (const b of form.querySelectorAll('.eventos button')) b.setAttribute('aria-pressed', String(b === boton));
     destinoBox.classList.toggle('hide', t !== 'traslado');
+    // Una salida saca al animal de la lista: el botón lo dice claro (en lugar de una ventanita de confirmación).
+    guardarBtn.textContent = t === 'retiro' ? `💾 Guardar: ${m} (ya no saldrá en la lista)` : '💾 Guardar lo que pasó';
+    guardarBtn.classList.toggle('peligro', t === 'retiro');
   };
   const enviar = (e: Event) => {
     e.preventDefault();
@@ -76,10 +79,8 @@ function NuevoEvento({ a }: { a: Animal }) {
       trasladar(a, hacia, val('fecha'), val('nota')); guardar(est.db); render(); return avisar('✅ Pasó a ' + hacia);
     }
     const ev = { id: nuevoId(), tipo: tipo.value as TipoEvento, fecha: val('fecha'), nota: val('nota'), motivo: undefined as string | undefined };
-    if (ev.tipo === 'retiro') {
-      ev.motivo = motivo.value;
-      if (!confirm(`¿Seguro? El animal ${a.arete} quedará como: ${ev.motivo}.\n\nYa no aparecerá en la lista de animales.`)) return;
-    } else delete ev.motivo;
+    if (ev.tipo === 'retiro') ev.motivo = motivo.value;
+    else delete ev.motivo;
     if (ev.tipo === 'parto') est.criaDe = a.arete;
     a.eventos.push(ev); guardar(est.db); render(); avisar('✅ Guardado: ' + (ev.motivo ?? EVENTOS[ev.tipo]));
   };
@@ -108,13 +109,18 @@ function NuevoEvento({ a }: { a: Animal }) {
       <p class="ayuda">Ya tiene la fecha de hoy. Toque el cuadro si fue otro día.</p>
       <label for="f-nota">Nota (si quiere)</label>
       <input id="f-nota" name="nota" placeholder="Ej.: toro Pinto, cría macho" />
-      <button class="pri grande">💾 Guardar lo que pasó</button>
+      <button class="pri grande" ref={(el: HTMLElement) => (guardarBtn = el)}>💾 Guardar lo que pasó</button>
     </form>
   );
 }
 
-function borrarEvento(a: Animal, id: string) {
-  if (!confirm('¿Seguro que quiere borrar esto?\n\nNo se puede deshacer.')) return;
+// Borrar pide un segundo toque en el mismo botón (no una ventanita del navegador, que algunas apps bloquean).
+function borrarEvento(a: Animal, id: string, boton: HTMLButtonElement) {
+  if (boton.dataset.seguro !== '1') {
+    boton.dataset.seguro = '1'; boton.textContent = '¿Seguro? Toque otra vez';
+    setTimeout(() => { boton.dataset.seguro = ''; boton.textContent = 'Borrar' }, 4000);
+    return;
+  }
   a.eventos = a.eventos.filter(x => x.id !== id); guardar(est.db); render(); avisar('✅ Borrado');
 }
 
@@ -132,7 +138,7 @@ function Pesajes({ a }: { a: Animal }) {
             <li class="ev">
               <span><b>{kilos(totalPesaje(e))}</b> {dif > 0 ? <span class="ok">▲ {kilos(dif)}</span> : dif < 0 ? <span class="bad">▼ {kilos(-dif)}</span> : null}<br />
                 <span class="mut">{fmt(e.fecha)} · ☀️ {kilos(e.am ?? 0)} · 🌙 {kilos(e.pm ?? 0)}</span></span>
-              <button class="borrar" onClick={() => borrarEvento(a, e.id)}>Borrar</button>
+              <button class="borrar" onClick={(ev: Event) => borrarEvento(a, e.id, ev.currentTarget as HTMLButtonElement)}>Borrar</button>
             </li>
           );
         })}
@@ -155,7 +161,7 @@ function Historial({ a }: { a: Animal }) {
           <li class="ev">
             <span><b>{textoEvento(e)}</b><br />
               <span class="mut">{fmt(e.fecha)}{e.nota ? ' · ' + e.nota : ''}</span></span>
-            <button class="borrar" onClick={() => borrarEvento(a, e.id)}>Borrar</button>
+            <button class="borrar" onClick={(ev: Event) => borrarEvento(a, e.id, ev.currentTarget as HTMLButtonElement)}>Borrar</button>
           </li>
         )) : <li class="mut">Sin eventos todavía.</li>}
       </ul>

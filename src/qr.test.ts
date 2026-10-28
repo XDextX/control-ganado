@@ -11,7 +11,7 @@ describe('QR', () => {
     const l = interpretar(qrDeAnimal(vaca));
     expect(l.tipo).toBe('animal');
     const otro: Db = { animales: {} };
-    expect(fusionar(otro, (l as { datos: unknown }).datos)).toEqual({ animales: 1, eventos: 1 });
+    expect(fusionar(otro, (l as { datos: unknown }).datos)).toEqual({ animales: 1, eventos: 1, descartados: 0 });
     expect(otro.animales[vaca.arete].finca).toBe('El Roble');
   });
   it('cualquier otro texto es un arete', () => {

@@ -28,7 +28,8 @@ let verFoto = false;
 export function VerReporte() {
   const r = armar();
   const enviarFoto = () => reporteAImagen(r).toBlob(async blob => {
-    const file = new File([blob!], `reporte-${est.repTipo}-${hoy()}.png`, { type: 'image/png' });
+    if (!blob) return alert('El teléfono no pudo crear la foto del reporte. Use “Guardar PDF / Imprimir”.');
+    const file = new File([blob], `reporte-${est.repTipo}-${hoy()}.png`, { type: 'image/png' });
     if (await compartir(file, r.titulo) === 'descargado') alert('Se descargó la imagen del reporte. Puede enviarla por mensaje desde sus descargas.');
   }, 'image/png');
 

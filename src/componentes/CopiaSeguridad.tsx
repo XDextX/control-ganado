@@ -19,7 +19,7 @@ export function CopiaSeguridad() {
     if (!file) return;
     try {
       const n = fusionar(est.db, JSON.parse(await file.text()));
-      guardar(est.db); marcarRespaldo(); volver(); alert(`Copia recuperada.\n\nSe agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}. No se borró nada.`);
+      guardar(est.db); marcarRespaldo(); volver(); alert(`Copia recuperada.\n\nSe agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}. No se borró nada.${n.descartados ? (n.descartados === 1 ? '\n\nSe ignoró 1 dato dañado que venía mal escrito.' : `\n\nSe ignoraron ${n.descartados} datos dañados que venían mal escritos.`) : ''}`);
     } catch (err) { alert('Ese archivo no es una copia de esta app.\n\n' + (err as Error).message) }
   };
   let archivo!: HTMLInputElement;

@@ -15,4 +15,4 @@ alPintar(() => raiz.replaceChildren(<Encabezado />, <main>{VISTAS[est.vista]()}<
 
 render();
 // Sin señal en el campo. Solo en producción: en desarrollo el caché estorbaría los cambios.
-if ('serviceWorker' in navigator && import.meta.env.PROD) navigator.serviceWorker.register('sw.js');
+if ('serviceWorker' in navigator && import.meta.env.PROD) navigator.serviceWorker.register('sw.js').catch(() => { /* sin service worker (modo privado o navegador limitado): la app funciona igual, solo que necesita señal */ });
