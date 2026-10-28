@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Manual de uso – Registro de Ganado</title>
+<style>
+@page{size:Letter;margin:16mm 15mm}
+body{font:12pt/1.5 "Segoe UI",system-ui,sans-serif;color:#1a1a1a;max-width:780px;margin:auto;padding:16px}
+h1{color:#2f6f3e;font-size:26pt;margin:0 0 4px}
+h2{color:#2f6f3e;font-size:16pt;border-bottom:2px solid #2f6f3e;padding-bottom:3px;margin-top:24px;break-after:avoid}
+h3{font-size:13pt;margin:16px 0 4px;break-after:avoid}
+.sub{color:#555;margin:0 0 18px}
+.nota{background:#fff4e5;border-left:5px solid #9a4f0f;padding:8px 12px;margin:10px 0;break-inside:avoid}
+.tip{background:#eef6ef;border-left:5px solid #2f6f3e;padding:8px 12px;margin:10px 0;break-inside:avoid}
+table{border-collapse:collapse;width:100%;margin:8px 0;break-inside:avoid}
+td,th{border:1px solid #bbb;padding:6px 8px;text-align:left;vertical-align:top}
+th{background:#eef6ef}
+b.btn{background:#2f6f3e;color:#fff;padding:1px 7px;border-radius:5px;white-space:nowrap}
+b.btn.blanco{background:#fff;color:#1a1a1a;border:1px solid #888}
+b.btn.rojo{background:#a32020}
+li{margin:4px 0}
+.indice{columns:2;font-size:11pt}
+</style></head><body>
+
+<h1>🐄 Registro de Ganado</h1>
+<p class="sub">Manual de uso · versión 1.1 · octubre de 2026</p>
+
+<div class="indice"><ol>
+<li>Qué es y cómo instalarla</li><li>La pantalla principal</li><li>Agregar un animal</li><li>Anotar lo que pasó</li>
+<li>La ficha del animal</li><li>Avisos de parto y secado</li><li>Pesaje de leche</li><li>Mover animales a otra finca</li>
+<li>Reportes</li><li>Copia de seguridad</li><li>Pasar datos a otro teléfono (QR)</li><li>Letra más grande</li>
+<li>Eliminar datos</li><li>Comentarios</li><li>Preguntas frecuentes</li>
+</ol></div>
+
+<h2>1. Qué es y cómo instalarla</h2>
+<p>Una app gratuita para llevar en el celular el registro de cada animal: celos, montas, preñeces, partos, destetes, secados, pesajes de leche, traslados entre fincas y salidas (venta, muerte o baja). Avisa cuándo se acerca un parto y cuándo hay que secar a una vaca de leche.</p>
+<p><b>Funciona sin señal</b>, no pide usuario ni contraseña y está pensada para usar con letra grande y botones grandes.</p>
+<div class="nota"><b>Importante:</b> los datos se guardan <b>solo dentro de cada teléfono</b>. No viajan solos a otros teléfonos ni a internet. Para no perderlos y para compartirlos, use la <b>copia de seguridad</b> (sección 10) y los <b>códigos QR</b> (sección 11).</div>
+<h3>Instalarla en el celular</h3>
+<ol>
+<li>Con señal, abra <b>https://xdextx.github.io/control-ganado/</b> y espere a que cargue.</li>
+<li>Toque el menú <b>⋮</b> (tres puntitos) → <b>Agregar a pantalla principal</b>. En iPhone: botón <b>Compartir</b> → <b>Agregar a inicio</b>.</li>
+<li>Aparece el ícono verde de la vaca. Desde ahí la app abre al instante, con o sin señal.</li>
+</ol>
+<div class="tip">Ábrala siempre desde el mismo ícono. Si la abre desde otro navegador, no verá los mismos datos. Cuando haya una versión nueva, el teléfono la baja solo y se ve la <b>siguiente vez</b> que abra la app.</div>
+
+<h2>2. La pantalla principal</h2>
+<p>De arriba hacia abajo:</p>
+<ul>
+<li><b class="btn">📷 Escanear código QR</b>: para recibir datos de otro teléfono o abrir un animal desde el QR del corral.</li>
+<li><b class="btn">➕ Agregar un animal</b>.</li>
+<li><b>🔍 Buscar animal</b>: escriba los <b>últimos números del arete</b> (por ejemplo <i>6921</i>) o el nombre. Los resultados aparecen justo debajo.</li>
+<li>Botones: <b class="btn blanco">📲 Pasar lo anotado</b>, <b class="btn blanco">🚚 Mover animales</b>, <b class="btn blanco">🥛 Pesaje de leche</b> y <b class="btn blanco">📋 Reportes</b>.</li>
+<li><b>Aviso de copia</b>: si lleva 7 días o más sin guardar una copia, se lo recuerda.</li>
+<li><b>⚠️ Próximos 30 días</b>: partos y secados que se acercan (sección 6).</li>
+<li><b>Mis animales</b>: la lista completa, que se puede filtrar por <b>finca</b>. Va de 15 en 15, con los botones <b class="btn blanco">← Anterior</b> y <b class="btn blanco">Siguiente →</b> al final.</li>
+<li>Al final: <b>⚙️ Copia de seguridad</b>, <b>🗑️ Eliminar datos</b> y <b>💬 Enviar comentarios o ideas</b>.</li>
+</ul>
+<h3>Cómo leer la tarjeta de cada animal</h3>
+<ul>
+<li><b>Nombre</b> (si tiene) y el arete, con los <b>últimos 4 números en grande</b>.</li>
+<li>Su estado: <b>Preñada · pare en 18 días</b>, <b>Seca</b> o la salida (<b>Venta</b>, <b>Muerte</b>…).</li>
+<li>Finca · categoría · raza · leche o carne · edad.</li>
+<li>📌 Lo último que le pasó y hace cuánto. 🥛 Su último pesaje, si es de leche.</li>
+</ul>
+<p>Los animales vendidos, muertos o dados de baja no salen en la lista. Para verlos toque <b>👁️ Ver también animales vendidos o muertos</b>.</p>
+
+<h2>3. Agregar un animal</h2>
+<ol>
+<li>Toque <b class="btn">➕ Agregar un animal</b>.</li>
+<li>Escriba el <b>número de arete</b> (obligatorio y no se puede repetir), el <b>nombre</b> si tiene, y la <b>finca</b> (al empezar a escribir, la app sugiere las que ya existen).</li>
+<li>Si quiere, abra <b>Más datos (opcional)</b>: tipo (leche o carne), fecha de nacimiento, sexo, raza, categoría y notas.</li>
+<li>Toque <b class="btn">💾 Guardar animal</b>. Sale el mensaje verde <b>✅ Animal guardado</b>.</li>
+</ol>
+<div class="tip"><b>Después de un parto</b>, la app ofrece <b class="btn">➕ Agregar la cría</b>: abre el alta con la finca, la raza y la fecha de nacimiento ya puestas, y la nota “Cría de…”. Solo falta el arete.</div>
+
+<h2>4. Anotar lo que pasó</h2>
+<p>Abra el animal (tóquelo en la lista o búsquelo). Arriba aparece <b>¿Qué pasó con este animal?</b>:</p>
+<ol>
+<li>Toque lo que pasó: <b class="btn blanco">🐂 Monta</b> <b class="btn blanco">🍼 Parto</b> <b class="btn blanco">🥛 Secado</b> <b class="btn blanco">🔥 Celo</b>, o <b class="btn blanco">➕ Otro</b> para ver más.</li>
+<li>La <b>fecha</b> ya tiene la de hoy. Toque el cuadro si fue otro día.</li>
+<li>Escriba una <b>nota</b> si quiere (por ejemplo, el toro o el sexo de la cría).</li>
+<li>Toque <b class="btn">💾 Guardar lo que pasó</b>.</li>
+</ol>
+<table>
+<tr><th>Botón</th><th>Cuándo usarlo</th></tr>
+<tr><td>🐂 Monta</td><td>Al cargarla con toro o inseminarla. <b>Con esta fecha se calcula el parto.</b></td></tr>
+<tr><td>🍼 Parto</td><td>Al parir. Después le ofrece agregar la cría.</td></tr>
+<tr><td>🥛 Secado</td><td>Al secar a la vaca de leche.</td></tr>
+<tr><td>🔥 Celo</td><td>Cuando la vea en celo.</td></tr>
+<tr><td>✔️ Preñez confirmada</td><td>Cuando el veterinario o el tacto la confirme.</td></tr>
+<tr><td>🐄 Destete</td><td>Al destetar a su cría.</td></tr>
+<tr><td>❌ Aborto / vacía</td><td>Si pierde la cría o resulta vacía. Quita los avisos de parto.</td></tr>
+<tr><td>💰 Vendido · ✝️ Murió · 📤 Dado de baja</td><td>Cuando sale del hato. El botón de guardar se pone rojo y dice “ya no saldrá en la lista”.</td></tr>
+<tr><td>🚚 Pasó a otra finca</td><td>Pide la finca de destino. El animal cambia de finca y queda el traslado en su historial.</td></tr>
+</table>
+<p><b>¿Se equivocó?</b> En el historial, toque <b class="btn rojo">Borrar</b> junto al evento. El botón cambia a “¿Seguro? Toque otra vez”; tóquelo de nuevo para borrarlo.</p>
+
+<h2>5. La ficha del animal</h2>
+<ul>
+<li><b>Arriba:</b> quién es, su finca y datos, si está preñada (con parto y secado probables) y su último pesaje.</li>
+<li><b>¿Qué pasó con este animal?</b> (sección 4).</li>
+<li><b>🥛 Pesajes de leche:</b> los últimos 5, con flecha verde ▲ si subió o roja ▼ si bajó.</li>
+<li><b>Historial:</b> todo lo anotado, del más nuevo al más viejo.</li>
+<li><b>✏️ Cambiar datos del animal:</b> arete, nombre, finca y más datos. Está cerrado para no cambiarlos sin querer.</li>
+<li><b>📲 Compartir o imprimir:</b> reporte del animal, QR para pasarlo a otro teléfono y QR para el corral.</li>
+<li><b>🗑️ Eliminar este animal</b> (sección 13).</li>
+</ul>
+
+<h2>6. Avisos de parto y secado</h2>
+<ul>
+<li><b>Parto probable</b> = fecha de la última monta + <b>283 días</b>.</li>
+<li><b>Secado</b> (solo vacas de leche) = <b>60 días antes</b> del parto probable.</li>
+<li>En la pantalla principal aparecen los que faltan <b>30 días o menos</b>, un renglón por animal: “parto en 12 días”, “secado atrasado 5 días”. Toque el animal para anotar lo que pasó.</li>
+<li>El aviso de secado se quita al anotar el <b>Secado</b>; los dos se quitan al anotar el <b>Parto</b> o <b>Aborto / vacía</b>.</li>
+</ul>
+<div class="tip">Si solo anotó la preñez confirmada, sin la monta, el parto se calcula desde la confirmación y saldrá más tarde de lo real. Anote siempre la monta.</div>
+
+<h2>7. Pesaje de leche</h2>
+<ol>
+<li>Toque <b class="btn blanco">🥛 Pesaje de leche</b> en la pantalla principal.</li>
+<li>Elija la <b>finca</b> y la <b>fecha</b> (viene la de hoy).</li>
+<li>Aparece cada vaca de leche con dos cuadros: <b>☀️ Mañana (kg)</b> y <b>🌙 Tarde (kg)</b>. Debajo dice cuánto dio <b>la vez pasada</b>.</li>
+<li>Escriba los kilos (puede usar coma o punto: <i>12,5</i>). La tecla <b>Siguiente</b> del teclado pasa al próximo cuadro. Deje en blanco la vaca que no se pesó.</li>
+<li>Abajo, siempre a la vista, está el total y <b class="btn">💾 Guardar pesaje</b>.</li>
+</ol>
+<ul>
+<li>Un número imposible (letras o más de 60 kg) se pone <b>rojo</b> y no deja guardar hasta corregirlo.</li>
+<li>Un número muy distinto a la vez pasada (más del doble o menos de la mitad, por ejemplo <i>51</i> en vez de <i>15</i>) se pone <b>amarillo</b> para que lo revise. Si está bien, se puede guardar igual.</li>
+<li>Si abre un día que ya tiene pesaje, los números aparecen para corregirlos. Las vacas <b>secas</b> salen marcadas.</li>
+</ul>
+
+<h2>8. Mover animales a otra finca</h2>
+<ol>
+<li>Toque <b class="btn blanco">🚚 Mover animales</b>.</li>
+<li>Elija <b>de qué finca salen</b>. Puede filtrar por categoría (por ejemplo, solo novillas).</li>
+<li>Marque los animales (o <b>☑️ Marcar todos</b>).</li>
+<li>Escriba o elija <b>a qué finca van</b> y la <b>fecha</b>.</li>
+<li>Toque el botón, que dice por ejemplo <b class="btn">🚚 Mover 8 animales a El Roble</b>.</li>
+</ol>
+<p>Para mover un solo animal, también puede usar <b>Otro → 🚚 Pasó a otra finca</b> en su ficha.</p>
+
+<h2>9. Reportes</h2>
+<p>Toque <b class="btn blanco">📋 Reportes</b> y elija:</p>
+<ul>
+<li><b>🐄 Animales por finca</b> · <b>🍼 Próximos partos y secados</b> · <b>📤 Salidas del mes</b> · <b>🚚 Traslados del mes</b> · <b>🥛 Pesajes de leche</b> (total por finca, promedio y cambio de cada vaca).</li>
+<li>El reporte de un solo animal está en su ficha: <b>📲 Compartir o imprimir → 📋 Reporte de este animal</b>.</li>
+</ul>
+<p>Primero se ve el reporte. Al final:</p>
+<ul>
+<li><b class="btn blanco">👁️ Ver la foto antes de enviar</b>: muestra la imagen exacta que se enviará.</li>
+<li><b class="btn">📲 Enviar como foto</b>: abre el menú de compartir del teléfono para mandarla por su app de mensajes.</li>
+<li><b class="btn blanco">🖨️ Guardar PDF / Imprimir</b>: elija “Guardar como PDF” o una impresora. Use esta opción para reportes muy largos: la foto se corta y lo avisa.</li>
+</ul>
+
+<h2>10. Copia de seguridad</h2>
+<p>Al final de la pantalla principal, en <b>⚙️ Copia de seguridad</b>:</p>
+<ul>
+<li><b class="btn blanco">📲 Enviar una copia</b> (o <b>💾 Guardar una copia</b> en la computadora): crea un archivo con <b>todos</b> sus datos. Mándeselo por mensaje a usted mismo o guárdelo en un lugar seguro.</li>
+<li><b class="btn blanco">📂 Recuperar una copia</b>: elija el archivo. <b>Se suma</b> a lo que ya tiene: agrega animales y eventos que falten y <b>no borra nada</b>. Si el archivo trae datos dañados, los ignora y le dice cuántos.</li>
+</ul>
+<div class="nota">Guarde una copia <b>seguido</b>. Si borra los datos del navegador, desinstala la app o cambia de teléfono, solo se recupera lo que esté en una copia. La app le recuerda si lleva 7 días sin hacerla.</div>
+
+<h2>11. Pasar datos a otro teléfono (QR)</h2>
+<table>
+<tr><th>Quiero…</th><th>Cómo</th></tr>
+<tr><td>Pasar <b>todo</b></td><td>Copia de seguridad (sección 10): enviar en un teléfono y recuperar en el otro.</td></tr>
+<tr><td>Pasar <b>lo anotado hoy</b> (o desde ayer, o de la semana)</td><td><b>📲 Pasar lo anotado</b>: elija el periodo y en el otro teléfono toque <b>📷 Escanear código QR</b> apuntando a la pantalla.</td></tr>
+<tr><td>Pasar <b>un animal</b> con su historial</td><td>En su ficha: <b>📲 Compartir o imprimir → Pasar este animal a otro teléfono (QR)</b>.</td></tr>
+<tr><td>Abrir un animal <b>desde el corral</b></td><td>En su ficha: <b>Código QR para el arete o corral</b> → imprimir y pegar. Al escanearlo se abre su ficha. Si el arete no está registrado, se abre el alta con el número puesto.</td></tr>
+</table>
+<p>Todo lo que llega por QR <b>se suma sin borrar nada</b>. La primera vez, el teléfono pide permiso para usar la cámara: toque <b>Permitir</b>. Si lo negó, la app explica cómo darlo. La cámara se apaga sola si cambia de app.</p>
+
+<h2>12. Letra más grande</h2>
+<p>Arriba a la derecha, <b>🔍 Letra más grande</b> agranda toda la app en ese teléfono. Tóquelo otra vez (<b>Letra normal</b>) para volver.</p>
+
+<h2>13. Eliminar datos</h2>
+<div class="nota"><b>Cuidado: borrar es para siempre y no se puede deshacer.</b> Si un animal se vendió o murió, <b>no lo elimine</b>: use “Otro → Vendido / Murió” para que quede el registro.</div>
+<ul>
+<li><b>Un animal:</b> en su ficha, <b>🗑️ Eliminar este animal</b>.</li>
+<li><b>Todo lo del teléfono:</b> al final de la pantalla principal, <b>🗑️ Eliminar datos → Borrar TODOS los datos</b>. Antes, guarde una copia.</li>
+</ul>
+<p>En los dos casos hay que escribir la palabra <b>BORRAR</b> y tocar <b class="btn rojo">🗑️ Sí, borrar para siempre</b>. Si se arrepiente, toque <b>✋ No, cancelar</b>.</p>
+
+<h2>14. Comentarios</h2>
+<p>Al final de la pantalla principal, <b>💬 Enviar comentarios o ideas</b>: escriba qué no se entiende, qué falla o qué le gustaría, y toque <b>✉️ Enviar por correo</b>. Solo se envía lo que usted escribe, nunca datos del ganado.</p>
+
+<h2>15. Preguntas frecuentes</h2>
+<p><b>¿Se pierden los datos si cierro la app o apago el teléfono?</b> No, quedan guardados.</p>
+<p><b>¿Cuándo sí se pierden?</b> Si borra los datos del navegador, desinstala el navegador o cambia de teléfono. Por eso, copia de seguridad seguido.</p>
+<p><b>¿Funciona sin señal?</b> Sí, después de abrirla una vez con señal. También abre al instante con señal mala.</p>
+<p><b>Mi familiar no ve los animales que yo anoté.</b> Es normal: cada teléfono tiene sus datos. Páseselos con “Pasar lo anotado” o con una copia.</p>
+<p><b>Dice “Ya existe un animal con el arete…”.</b> Ese arete ya está. Búsquelo por sus últimos números (puede estar entre los vendidos).</p>
+<p><b>El botón de guardar se puso rojo.</b> Eligió una salida (venta, muerte o baja): al guardar, el animal deja de salir en la lista.</p>
+<p><b>Un número del pesaje está amarillo.</b> Es muy distinto a la vez pasada. Revíselo; si está bien, guarde igual.</p>
+</body></html>

@@ -34,6 +34,12 @@ npm run build    # versión para publicar (carpeta dist/)
 
 Hecha con Vite y TypeScript, con TSX propio sin librerías de interfaz (`src/jsx.ts`). Cada vez que se sube algo a `main`, una acción del repositorio corre las pruebas y publica la página.
 
+## Documentación
+
+- [Manual de uso](docs/manual-usuario.html), para las personas que llevan el registro.
+- [Manual para desarrolladores](docs/desarrollo.md): arquitectura, modelo de datos, sincronización, seguridad y cómo publicar.
+- [Auditoría de fallos y vulnerabilidades](docs/auditoria.md).
+
 ## Licencia
 
 [MIT](LICENSE)
