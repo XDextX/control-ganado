@@ -6,6 +6,7 @@
   "lang": "es",
   "start_url": "./index.html",
   "display": "standalone",
+  "launch_handler": {"client_mode": ["focus-existing", "auto"]},
   "background_color": "#f6f4ef",
   "theme_color": "#2f6f3e",
   "icons": [
