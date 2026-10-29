@@ -6,6 +6,23 @@ App gratuita y sencilla para llevar el registro del ganado de una finca desde el
 
 La usa una finca familiar de ganado de leche y carne.
 
+### Agregarla a la pantalla de inicio
+
+Abra el enlace con señal, espere a que cargue y siga los pasos de su navegador. Después ábrala siempre desde el ícono: funciona sin señal.
+
+| Navegador | Pasos |
+|---|---|
+| **Chrome** (Android) — recomendado | Tres puntitos **⋮** arriba a la derecha → **Agregar a pantalla principal** (o **Instalar app**) → **Instalar** |
+| **Samsung Internet** | Menú **☰** abajo → **Agregar página a** → **Pantalla de inicio** |
+| **Edge** (Android) | Tres puntitos **…** abajo → **Agregar al teléfono** (o **Agregar a pantalla de inicio**) |
+| **Firefox** (Android) | Tres puntitos **⋮** → **Instalar** (o **Agregar a pantalla de inicio**) |
+| **Opera / Opera GX** | Menú → **Agregar a…** → **Pantalla de inicio**. Ojo: en Opera no se descarga bien la copia de seguridad y el ícono puede abrir varias ventanas; mejor use Chrome |
+| **Safari** (iPhone) | Botón **Compartir** (cuadro con flecha ↑) → **Agregar a inicio** → **Agregar**. En iPhone solo funciona desde Safari |
+
+Si el teléfono pregunta si el navegador puede agregar íconos, toque **Permitir**.
+
+**Cada navegador guarda sus propios datos.** Si cambia de navegador, antes pase sus animales: en el viejo, **⚙️ Copia de seguridad → ✉️ Enviar la copia como texto**; en el nuevo, péguela en **Pegue aquí una copia recibida como texto**.
+
 <p>
   <img src="docs/capturas/lista.png" width="200" alt="Pantalla principal: avisos de partos y secados y lista de animales">
   <img src="docs/capturas/ficha.png" width="200" alt="Ficha de una vaca: preñez, parto probable y eventos">
