@@ -52,13 +52,13 @@ describe('lo anotado desde una fecha', () => {
 
 describe('importar respaldo', () => {
   it('suma animales y eventos sin borrar ni duplicar', () => {
-    const db: Db = { animales: { X: vaca('leche', [{ id: '1', tipo: 'celo', fecha: '2026-01-01', nota: '' }]) } };
+    const db: Db = { animales: { X: { ...vaca('leche', [{ id: '1', tipo: 'celo', fecha: '2026-01-01', nota: '' }]), nombre: 'propio' } } };
     const n = fusionar(db, { animales: {
       X: { ...vaca('leche', [{ id: '1', tipo: 'celo', fecha: '2026-01-01', nota: '' }, { id: '2', tipo: 'monta', fecha: '2026-01-02', nota: '' }]), nombre: 'otro' },
       Y: { ...vaca('carne', []), arete: 'Y' } } });
     expect(n).toEqual({ animales: 1, eventos: 1, descartados: 0 });
     expect(db.animales.X.eventos).toHaveLength(2);
-    expect(db.animales.X.nombre).toBe('');
+    expect(db.animales.X.nombre).toBe('propio');
   });
   it('rechaza archivos que no son respaldo', () => {
     expect(() => fusionar({ animales: {} }, { hola: 1 })).toThrow();
@@ -79,6 +79,11 @@ describe('traslados', () => {
     trasladar(otro, 'El Roble', '2026-10-27');
     fusionar(aqui, { animales: { X: otro } });
     expect(aqui.animales.X.finca).toBe('El Roble');
+  });
+  it('completa los datos vacíos con la copia, sin pisar lo ya escrito', () => {
+    const aqui: Db = { animales: { X: { ...vaca('leche', []), nombre: '', raza: 'Jersey' } } };
+    fusionar(aqui, { animales: { X: { ...vaca('leche', []), nombre: 'Pinta', raza: 'Holstein' } } });
+    expect(aqui.animales.X).toMatchObject({ nombre: 'Pinta', raza: 'Jersey' });
   });
   it('sin traslado nuevo, respeta la finca que se cambió a mano en este teléfono', () => {
     const aqui: Db = { animales: { X: { ...vaca('carne', []), finca: 'La Esperanza' } } };

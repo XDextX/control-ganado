@@ -111,12 +111,12 @@ No hay servidor: los datos se pasan por **copia de seguridad** (archivo `.txt` c
 
 `fusionar(destino, recibido)` **nunca borra**:
 1. Valida todo con `limpiarAnimal`/`limpiarEvento`. Si un animal no tiene forma válida, rechaza el archivo entero; los eventos inválidos se descartan y se cuentan.
-2. Animales nuevos se agregan; en los existentes se suman los eventos cuyo `id` no estaba. Los datos propios del animal (nombre, notas…) **no se pisan**.
+2. Animales nuevos se agregan; en los existentes se suman los eventos cuyo `id` no estaba. Los datos del animal (nombre, notas…) que aquí están **vacíos** se completan con la copia; los ya escritos **no se pisan**.
 3. Si llegó un traslado, la finca del animal pasa a la del traslado más reciente.
 
 `cambiosDesde(db, fecha)` arma "lo anotado desde un día" para el QR: eventos cuyo `id` dice que se anotaron ese día o después, más los animales con `creado` en ese periodo, sin campos vacíos para que quepa.
 
-Límites conocidos: un evento borrado vuelve si se importa una copia vieja (no hay registro de borrados), y los cambios de datos de un animal existente solo viajan en la copia completa… y aun así no pisan los del otro teléfono.
+Límites conocidos: un evento borrado vuelve si se importa una copia vieja (no hay registro de borrados), y los cambios de datos de un animal existente solo viajan en la copia completa… y aun así solo llenan lo que en el otro teléfono estaba vacío: un nombre **cambiado** (no vacío) no viaja.
 
 ## Funcionar sin conexión (`public/sw.js`)
 
