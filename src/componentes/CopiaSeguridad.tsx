@@ -14,15 +14,25 @@ export async function guardarCopia() {
 }
 
 export function CopiaSeguridad() {
+  const juntar = (texto: string, que: string) => {
+    try {
+      const n = fusionar(est.db, JSON.parse(texto.trim()));
+      guardar(est.db); marcarRespaldo(); volver(); alert(`Copia recuperada.\n\nSe agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}. No se borró nada.${n.descartados ? (n.descartados === 1 ? '\n\nSe ignoró 1 dato dañado que venía mal escrito.' : `\n\nSe ignoraron ${n.descartados} datos dañados que venían mal escritos.`) : ''}`);
+    } catch (err) { alert(`${que} no es una copia de esta app.\n\n` + (err as Error).message) }
+  };
   const recuperar = async (e: Event) => {
     const inp = e.target as HTMLInputElement, file = inp.files?.[0]; inp.value = '';
-    if (!file) return;
-    try {
-      const n = fusionar(est.db, JSON.parse(await file.text()));
-      guardar(est.db); marcarRespaldo(); volver(); alert(`Copia recuperada.\n\nSe agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}. No se borró nada.${n.descartados ? (n.descartados === 1 ? '\n\nSe ignoró 1 dato dañado que venía mal escrito.' : `\n\nSe ignoraron ${n.descartados} datos dañados que venían mal escritos.`) : ''}`);
-    } catch (err) { alert('Ese archivo no es una copia de esta app.\n\n' + (err as Error).message) }
+    if (file) juntar(await file.text(), 'Ese archivo');
   };
-  let archivo!: HTMLInputElement;
+  // Sin archivos: algunos teléfonos o navegadores internos no dejan descargar ni compartir archivos, pero sí texto.
+  const enviarTexto = async () => {
+    const texto = JSON.stringify(est.db);
+    try { await navigator.share({ text: texto }); marcarRespaldo(); render(); return avisar('✅ Copia enviada') }
+    catch (e) { if ((e as Error).name === 'AbortError') return }
+    try { await navigator.clipboard.writeText(texto); marcarRespaldo(); render(); avisar('✅ Copia copiada: péguela en un mensaje') }
+    catch { manual.value = texto; manual.classList.remove('hide'); manual.select(); alert('Mantenga el dedo sobre el texto marcado y elija Copiar. Después péguelo en un mensaje.') }
+  };
+  let archivo!: HTMLInputElement, manual!: HTMLTextAreaElement, pegado!: HTMLTextAreaElement;
   return (
     <details open={!Object.keys(est.db.animales).length}>
       <summary>⚙️ Copia de seguridad</summary>
@@ -32,6 +42,13 @@ export function CopiaSeguridad() {
       {puedeCompartir(archivoCopia()) && <button class="grande" onClick={() => { descargar(archivoCopia(), archivoCopia().name); marcarRespaldo(); render(); avisar('✅ Copia guardada en Descargas') }}>💾 Guardar la copia en este teléfono</button>}
       <button class="grande" onClick={() => archivo.click()}>📂 Recuperar una copia</button>
       <input ref={(el: HTMLInputElement) => (archivo = el)} type="file" accept=".json,.txt,application/json,text/plain" class="hide" onChange={recuperar} />
+      <h3>¿No se puede guardar el archivo?</h3>
+      <p class="ayuda">Envíe la copia como texto en un mensaje (a usted mismo o a otro teléfono). Para recuperarla, copie ese mensaje y péguelo abajo.</p>
+      <button class="grande" onClick={enviarTexto}>✉️ Enviar la copia como texto</button>
+      <textarea class="hide" rows="4" readonly ref={(el: HTMLTextAreaElement) => (manual = el)}></textarea>
+      <label for="c-pegar">Pegue aquí una copia recibida como texto</label>
+      <textarea id="c-pegar" rows="3" ref={(el: HTMLTextAreaElement) => (pegado = el)}></textarea>
+      <button class="grande" onClick={() => pegado.value.trim() ? juntar(pegado.value, 'Ese texto') : alert('Primero pegue el texto de la copia en el cuadro.')}>📥 Recuperar la copia pegada</button>
     </details>
   );
 }
