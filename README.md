@@ -4,6 +4,17 @@ App gratuita y sencilla para llevar el registro del ganado de una finca desde el
 
 **Usarla:** https://xdextx.github.io/control-ganado/ — ábrala con señal una vez y agréguela a la pantalla de inicio del teléfono.
 
+La usa una finca familiar de ganado de leche y carne.
+
+<p>
+  <img src="docs/capturas/lista.png" width="200" alt="Pantalla principal: avisos de partos y secados y lista de animales">
+  <img src="docs/capturas/ficha.png" width="200" alt="Ficha de una vaca: preñez, parto probable y eventos">
+  <img src="docs/capturas/pesaje.png" width="200" alt="Planilla del pesaje de leche de la mañana y la tarde">
+  <img src="docs/capturas/reporte.png" width="200" alt="Reporte de próximos partos y secados para enviar como foto o PDF">
+</p>
+
+> **In English:** an offline-first livestock register for a family cattle farm, built for users aged 60+ (large buttons, plain Spanish, adjustable text size). It is a Vite + TypeScript PWA with a custom TSX runtime (no UI framework), a cache-first service worker, and data kept only in the phone's `localStorage`: no server, no accounts. Phones sync by QR code or backup file with a merge that never deletes data, and incoming data is validated before it is stored. It covers calving and drying-off alerts, milk weighing, moving animals between farms, and reports as images or PDF. Includes unit tests (vitest), CI deploy to GitHub Pages, a [security audit](docs/auditoria.md) and a [developer guide](docs/desarrollo.md) (in Spanish).
+
 ## Qué hace
 
 - Registro por número de arete, nombre, finca, raza, sexo y categoría.
