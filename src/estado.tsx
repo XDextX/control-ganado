@@ -27,9 +27,21 @@ let pintor = () => {};
 export const alPintar = (f: () => void) => { pintor = f };
 export const render = () => pintor();
 
-export function ir(v: Vista) { detenerCamara(); if (v !== est.vista) est.anterior = est.vista; est.vista = v; render(); scrollTo(0, 0) }
+export function ir(v: Vista) {
+  detenerCamara(); if (v !== est.vista) est.anterior = est.vista; est.vista = v; render(); scrollTo(0, 0);
+  // Fuera de la lista se deja un paso en el historial: así el botón "atrás" del teléfono vuelve en vez de cerrar la app.
+  if (v !== 'lista' && !history.state?.app) history.pushState({ app: 1 }, '');
+}
 export function abrir(arete: string | null) { est.criaDe = ''; est.actual = arete ? est.db.animales[arete] : null; ir('animal') }
-export function volver() { est.actual = null; ir('lista') }
+export function volver() { est.actual = null; ir('lista'); if (history.state?.app) history.back() }
+
+// Botón "atrás" del teléfono: hace lo mismo que el "← Volver" de cada pantalla.
+addEventListener('popstate', () => {
+  if (est.vista === 'lista') return; // ya volvió con el botón de la pantalla
+  if (est.vista === 'qr') return ir('animal');
+  if (est.vista === 'reporte' && est.anterior !== 'lista') return ir(est.anterior);
+  est.actual = null; ir('lista');
+});
 export function mostrarReporte(t: TipoReporte) { est.repTipo = t; ir('reporte') }
 
 export function descargar(blob: Blob, nombre: string) {
