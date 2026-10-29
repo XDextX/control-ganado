@@ -1,6 +1,6 @@
 import { h } from '../jsx';
 import { cuantos, diasHasta, fusionar, guardar, hoy, marcarRespaldo, ultimoRespaldo } from '../datos';
-import { avisar, compartir, est, puedeCompartir, render, volver } from '../estado';
+import { avisar, compartir, descargar, est, puedeCompartir, render, volver } from '../estado';
 
 // Como texto (.txt): algunos navegadores de teléfono no dejan compartir archivos .json, pero sí .txt. El contenido es el mismo.
 const archivoCopia = () => new File([JSON.stringify(est.db, null, 1)], `ganado-copia-${hoy()}.txt`, { type: 'text/plain' });
@@ -28,6 +28,8 @@ export function CopiaSeguridad() {
       <summary>⚙️ Copia de seguridad</summary>
       <p class="ayuda">Guarde una copia seguido para no perder sus datos si se daña o cambia de teléfono. También sirve para pasar todos los animales a otro teléfono por mensaje.</p>
       <button class="grande" onClick={guardarCopia}>{textoCopia()}</button>
+      {/* En el teléfono el botón de arriba abre el menú de compartir; este guarda el archivo en Descargas */}
+      {puedeCompartir(archivoCopia()) && <button class="grande" onClick={() => { descargar(archivoCopia(), archivoCopia().name); marcarRespaldo(); render(); avisar('✅ Copia guardada en Descargas') }}>💾 Guardar la copia en este teléfono</button>}
       <button class="grande" onClick={() => archivo.click()}>📂 Recuperar una copia</button>
       <input ref={(el: HTMLInputElement) => (archivo = el)} type="file" accept=".json,.txt,application/json,text/plain" class="hide" onChange={recuperar} />
     </details>

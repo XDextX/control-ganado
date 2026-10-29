@@ -34,8 +34,10 @@ export function mostrarReporte(t: TipoReporte) { est.repTipo = t; ir('reporte') 
 
 export function descargar(blob: Blob, nombre: string) {
   const url = URL.createObjectURL(blob);
-  h('a', { href: url, download: nombre }).dispatchEvent(new MouseEvent('click'));
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // En la página y con tiempo de sobra: algunos teléfonos ignoran el clic en un enlace suelto o tardan en leer el archivo.
+  const a = h('a', { href: url, download: nombre, class: 'hide' }) as HTMLAnchorElement;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 // Abre el menú de compartir del teléfono (donde aparecen las apps de mensajería); en la computadora, descarga el archivo.
@@ -43,7 +45,11 @@ export const puedeCompartir = (f: File) => !!navigator.canShare?.({ files: [f] }
 export async function compartir(file: File, titulo: string): Promise<'compartido' | 'cancelado' | 'descargado'> {
   if (!puedeCompartir(file)) { descargar(file, file.name); return 'descargado' }
   try { await navigator.share({ files: [file], title: titulo }); return 'compartido' }
-  catch { return 'cancelado' }
+  catch (e) {
+    // Solo "cancelado" si la persona cerró el menú; si el teléfono no pudo compartir, se descarga para no perder la copia.
+    if ((e as Error).name === 'AbortError') return 'cancelado';
+    descargar(file, file.name); return 'descargado';
+  }
 }
 
 // Mensaje grande que confirma que algo quedó guardado.
