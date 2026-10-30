@@ -1,5 +1,5 @@
 // Cada reporte es un objeto simple que se pinta igual en pantalla, en PDF (imprimir) y en imagen (para enviar por mensaje).
-import { Animal, Db, EVENTOS, MOTIVOS, cuantos, kilos, pesajeDe, totalPesaje, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, prenezAbierta, retiro } from './datos';
+import { Animal, Db, EVENTOS, MOTIVOS, cuantos, kilos, pesajeDe, totalPesaje, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, textoEvento, prenezAbierta, retiro } from './datos';
 
 export interface Seccion { titulo: string; nota: string; cols: string[]; filas: string[][] }
 export interface Reporte { titulo: string; sub: string; secciones: Seccion[] }
@@ -107,7 +107,7 @@ export function ficha(a: Animal): Reporte {
     secciones: [
       { titulo: 'Datos', nota: '', cols: [], filas: datos },
       { titulo: 'Historial', nota: a.eventos.length ? '' : 'Sin eventos.', cols: ['Fecha', 'Evento', 'Nota'],
-        filas: ordenados(a).reverse().map(e => [fmt(e.fecha), (e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}` : e.tipo === 'pesaje' ? `Pesaje: ${kilos(totalPesaje(e))}` : EVENTOS[e.tipo] + (e.motivo ? ' · ' + e.motivo : '')), e.nota]) },
+        filas: ordenados(a).reverse().map(e => [fmt(e.fecha), textoEvento(e, a), e.nota]) },
     ],
   };
 }

@@ -63,7 +63,7 @@ function Tarjeta({ a }: { a: Animal }) {
         </span>
       </div>
       <div class="mut">{[a.finca, a.categoria, a.sexo === 'M' ? 'Macho' : '', a.raza, a.tipo === 'leche' ? 'Leche' : 'Carne', edad(a.nac)].filter(Boolean).join(' · ')}</div>
-      {ult && <div>📌 {textoEvento(ult)} · <span class="mut">{haceCuanto(ult.fecha)}</span></div>}
+      {ult && <div>📌 {textoEvento(ult, a)} · <span class="mut">{haceCuanto(ult.fecha)}</span></div>}
       {pes && <div>🥛 Último pesaje: {kilos(totalPesaje(pes))} · <span class="mut">{haceCuanto(pes.fecha)}</span></div>}
       {!ult && !pes && <div class="mut">Sin eventos anotados.</div>}
     </div>

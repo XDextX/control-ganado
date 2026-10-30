@@ -108,6 +108,17 @@ Errores de datos encontrados después, ya corregidos:
 | 12 | Media | Cambiar el arete deja el animal repetido en otros teléfonos al juntar copias | Aviso al guardar: cambiarlo también en los otros teléfonos (arreglarlo del todo exigiría cambiar el formato) |
 | 13 | Baja | La ficha mostraba dos pesajes del mismo día tras una corrección en otro teléfono | Un pesaje por día, el último anotado, igual que el reporte |
 
+### Revisión del 30 de octubre de 2026
+
+| # | Severidad | Hallazgo | Corrección |
+|---|---|---|---|
+| 14 | Alta | Al cargar se quitaban sin avisar animales y eventos inválidos o textos largos, y el siguiente guardado lo hacía permanente | `cargar` rescata el original, avisa y ofrece guardarlo; los formularios limitan el largo |
+| 15 | Alta | Cambiar finca o fecha en el pesaje borraba lo escrito | Lo escrito se conserva por día y vaca, con aviso si queda sin guardar |
+| 16 | Media | Un guardado fallido mostraba el mensaje de éxito | `guardarYAvisar` muestra la falla en pantalla |
+| 17 | Alta | Una vaca que volvía a celo seguía preñada, y un macho podía tener fecha de parto | El celo anula la preñez y queda como repetición (decisión del dueño); los machos no tienen preñez |
+| 18 | Media | Marcas viejas en Mover animales fallaban o movían un animal que ya no estaba en la lista | Se quitan las marcas de animales que ya no están en la finca |
+| 19 | Media | Recuperar una copia ocultaba el recordatorio de respaldo; los datos no pedían almacenamiento persistente | Recuperar o copiar al portapapeles ya no cuenta como respaldo; se pide `storage.persist` |
+
 ## Revisado sin hallazgos
 
 - **Inyección de HTML (XSS):** todo el texto se agrega con `document.createTextNode` (ver `src/jsx.ts`) y no se usa `innerHTML`. Los enlaces de correo y de reporte en el repositorio codifican el texto con `encodeURIComponent`.

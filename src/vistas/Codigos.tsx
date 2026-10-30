@@ -1,7 +1,7 @@
 // Pantallas de códigos QR: mostrar el de un animal o del corral, pasar lo anotado y escanear.
 import { h, Fragment } from '../jsx';
-import { areteValido, cambiosDesde, cuantos, fusionar, guardar, hoy, sumarDias } from '../datos';
-import { abrir, avisar, est, ir, render, volver } from '../estado';
+import { areteValido, cambiosDesde, cuantos, fusionar, hoy, sumarDias } from '../datos';
+import { abrir, avisar, est, guardarYAvisar, ir, render, volver } from '../estado';
 import { Escaner, ImagenQr, interpretar, qrDeAnimal, qrDeDatos } from '../qr';
 
 export function VerQr() {
@@ -26,7 +26,8 @@ function leerQr(texto: string) {
   try { l = interpretar(texto) } catch { alert('El código QR no se pudo leer. Intente de nuevo.'); return ir('escaner') }
   if (l.tipo === 'animal') {
     try {
-      const n = fusionar(est.db, l.datos); guardar(est.db);
+      const n = fusionar(est.db, l.datos);
+      if (!guardarYAvisar()) return ir('lista');
       alert(`Listo. Se agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}.\n\nNo se borró nada.${n.descartados ? (n.descartados === 1 ? '\n\nSe ignoró 1 dato dañado que venía mal escrito.' : `\n\nSe ignoraron ${n.descartados} datos dañados que venían mal escritos.`) : ''}`);
       const aretes = Object.values((l.datos as { animales: Record<string, { arete: string }> }).animales).map(a => a.arete.trim());
       return aretes.length === 1 && Object.hasOwn(est.db.animales, aretes[0]) ? abrir(aretes[0]) : volver();

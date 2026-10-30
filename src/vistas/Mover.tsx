@@ -1,7 +1,7 @@
 // Mover varios animales de una finca a otra de una sola vez. A cada uno le queda su traslado en el historial.
 import { h } from '../jsx';
-import { cuantos, fincas, guardar, hoy, porArete, retiro, trasladar } from '../datos';
-import { avisar, est, render, volver } from '../estado';
+import { cuantos, fincas, hoy, porArete, retiro, trasladar } from '../datos';
+import { est, guardarYAvisar, render, volver } from '../estado';
 import { NombreYArete } from '../componentes/Arete';
 
 let origen = '', categoria = ''; // categoria '' = todas
@@ -11,6 +11,8 @@ export function Mover() {
   const lista = fincas(est.db);
   if (!lista.includes(origen)) { origen = lista[0] ?? ''; categoria = ''; marcados.clear() }
   const enFinca = Object.values(est.db.animales).filter(a => a.finca === origen && !retiro(a)).sort(porArete);
+  // Una marca vieja (el animal se eliminó o ya se movió, y se salió con el "atrás" del teléfono) no debe mover nada.
+  for (const m of marcados) if (!enFinca.some(a => a.arete === m)) marcados.delete(m);
   const categorias = [...new Set(enFinca.map(a => a.categoria || 'Sin categoría'))];
   // Solo se ven (y se marcan con "Marcar todos") los de la categoría elegida; lo ya marcado en otra categoría se conserva.
   const animales = enFinca.filter(a => !categoria || (a.categoria || 'Sin categoría') === categoria);
@@ -32,7 +34,7 @@ export function Mover() {
   const mover = () => {
     const hacia = destino.value.trim(), n = marcados.size;
     for (const arete of marcados) trasladar(est.db.animales[arete], hacia, fecha.value || hoy());
-    guardar(est.db); marcados.clear(); volver(); avisar(`🚚 ${cuantos(n, 'animal pasó', 'animales pasaron')} a ${hacia}`);
+    marcados.clear(); volver(); guardarYAvisar(`🚚 ${cuantos(n, 'animal pasó', 'animales pasaron')} a ${hacia}`);
   };
 
   return (
@@ -61,7 +63,7 @@ export function Mover() {
         ))}
       </div>
       <label for="m-destino">3. ¿A qué finca van?</label>
-      <input id="m-destino" list="m-fincas" ref={(el: HTMLInputElement) => (destino = el)} onInput={actualizar} placeholder="Elija o escriba el nombre" />
+      <input id="m-destino" maxlength="80" list="m-fincas" ref={(el: HTMLInputElement) => (destino = el)} onInput={actualizar} placeholder="Elija o escriba el nombre" />
       <datalist id="m-fincas">{lista.filter(f => f !== origen).map(f => <option value={f} />)}</datalist>
       <label for="m-fecha">4. Fecha</label>
       <input id="m-fecha" type="date" value={hoy()} ref={(el: HTMLInputElement) => (fecha = el)} />

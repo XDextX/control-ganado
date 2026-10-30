@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { pesajes, traslados } from './reportes';
-import { Animal, Db, alertas, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
+import { Animal, Db, KEY, alertas, cargar, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
@@ -197,5 +197,52 @@ describe('seguridad: lo que entra por copia o QR', () => {
     expect(l.animal.tipo).toBe('leche');
     expect(l.animal.notas).toHaveLength(1000);
     expect(l.animal.eventos[0]).toMatchObject({ am: undefined, pm: 10 });
+  });
+});
+
+describe('revisión 2026-10-30', () => {
+  const guardado = (crudo: string) => {
+    const m = new Map([[KEY, crudo]]);
+    vi.stubGlobal('localStorage', { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => m.set(k, v) });
+    const alerta = vi.fn(); vi.stubGlobal('alert', alerta);
+    return { m, alerta };
+  };
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('al cargar, lo que no pasa la validación queda rescatado y se avisa', () => {
+    const crudo = JSON.stringify({ animales: {
+      A: { arete: 'A', eventos: [{ id: '1', tipo: 'celo', fecha: '2026-01-01' }, { tipo: 'celo' }], notas: 'x'.repeat(1500) },
+      B: { arete: 'B' },
+    } });
+    const { m, alerta } = guardado(crudo);
+    const db = cargar();
+    expect(Object.keys(db.animales)).toEqual(['A']);
+    expect([...m.entries()].find(([k]) => k.startsWith(KEY + '.danado-'))?.[1]).toBe(crudo);
+    expect(alerta).toHaveBeenCalledOnce();
+    // No se repite en cada apertura: lo limpio ya quedó guardado.
+    cargar();
+    expect(alerta).toHaveBeenCalledOnce();
+  });
+  it('al cargar datos sanos no se rescata ni se avisa nada', () => {
+    const { m, alerta } = guardado(JSON.stringify({ animales: { A: { ...vaca('leche', [{ id: '1', tipo: 'celo', fecha: '2026-01-01', nota: '' }]), arete: 'A' } } }));
+    cargar();
+    expect(m.size).toBe(1);
+    expect(alerta).not.toHaveBeenCalled();
+  });
+  it('guardar dice si de verdad se guardó', () => {
+    vi.stubGlobal('localStorage', { setItem: () => { throw new Error('lleno') } });
+    expect(guardar({ animales: {} })).toBe(false);
+  });
+  it('un celo después de la monta anula la preñez y queda como repetición', () => {
+    const a = vaca('leche', [{ id: '1', tipo: 'monta', fecha: '2026-01-01', nota: '' }, { id: '2', tipo: 'celo', fecha: '2026-01-22', nota: '' }]);
+    expect(prenezAbierta(a)).toBeNull();
+    expect(esRepeticion(a, a.eventos[1])).toBe(true);
+    expect(textoEvento(a.eventos[1], a)).toContain('repetición');
+    const b = vaca('leche', [{ id: '1', tipo: 'celo', fecha: '2026-01-01', nota: '' }, { id: '2', tipo: 'monta', fecha: '2026-01-22', nota: '' }]);
+    expect(esRepeticion(b, b.eventos[0])).toBe(false);
+    expect(prenezAbierta(b)).not.toBeNull();
+  });
+  it('un macho nunca tiene fecha de parto', () => {
+    expect(prenezAbierta({ ...vaca('carne', [{ id: '1', tipo: 'monta', fecha: '2026-01-01', nota: '' }]), sexo: 'M' })).toBeNull();
   });
 });

@@ -93,13 +93,13 @@ interface Evento {
 }
 ```
 
-Otras claves: `ganado.v1.respaldo` (fecha de la última copia), `ganado.v1.letra` (letra grande) y `ganado.v1.danado-<ms>` (datos ilegibles rescatados, ver auditoría).
+Otras claves: `ganado.v1.respaldo` (fecha de la última copia enviada o guardada; recuperar no cuenta), `ganado.v1.letra` (letra grande) y `ganado.v1.danado-<ms>` (datos ilegibles rescatados, ver auditoría).
 
 **Regla de oro: no romper el formato.** Los teléfonos guardan datos y copias viejas que deben seguir abriendo. Agregue campos **opcionales** y tipos de evento nuevos; no renombre ni quite campos. Si un cambio exige migrar datos, es un cambio mayor: proponerlo antes (y subir la versión mayor).
 
 ### Reglas del hato (`datos.ts`)
 
-- **Parto probable:** última monta + `GESTACION` (283 días). Si no hay monta, se usa la preñez confirmada. Un parto o aborto posterior cierra la preñez (`prenezAbierta`).
+- **Parto probable:** última monta + `GESTACION` (283 días). Si no hay monta, se usa la preñez confirmada. Un parto, aborto o celo posterior cierra la preñez (`prenezAbierta`); ese celo se muestra como repetición (`esRepeticion`). Los machos nunca tienen preñez.
 - **Secado:** parto probable − `SECADO_ANTES` (60 días), solo en vacas de leche. **Seca:** último secado posterior al último parto (`estaSeca`).
 - **Avisos:** partos y secados a 30 días o menos (`alertas`).
 - **Pesaje:** un evento por vaca y día (`guardarPesajes` reemplaza). `leerKilos` acepta coma, rechaza más de `MAX_KILOS` (60) por ordeño. `esRaro`: más del doble o menos de la mitad que la vez anterior.
@@ -128,7 +128,8 @@ Estrategia **copia local primero, actualización por detrás**:
 ## Seguridad
 
 - Todo lo que entra por copia o QR pasa por `limpiarAnimal`/`limpiarEvento` (tipos, largos, fechas, tipos de evento conocidos, kilos posibles, aretes reservados como `__proto__`). Lo guardado también se limpia al cargar.
-- Si lo guardado es ilegible, se rescata en `ganado.v1.danado-*` antes de seguir.
+- Si lo guardado es ilegible o algo no pasa la validación, el original se rescata en `ganado.v1.danado-*`, se avisa y se ofrece guardarlo desde Copia de seguridad.
+- Para guardar desde la interfaz use `guardarYAvisar`: si falla, lo dice en pantalla y no muestra el mensaje de éxito.
 - Acciones destructivas o importantes **no** usan `confirm()`/`prompt()` (el navegador interno de algunas apps los bloquea): se confirma dentro de la pantalla (escribir BORRAR, segundo toque, botón que dice lo que hará).
 - CSP en el build (`vite.config.ts`): solo código propio; `data:`/`blob:` para QR, fotos y cámara. Si agrega un recurso externo, hay que ajustarla.
 - Los respaldos con aretes oficiales están en `.gitignore`: el repositorio es público.

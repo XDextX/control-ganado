@@ -1,6 +1,6 @@
 import { h } from '../jsx';
-import { Animal, KEY, cuantos, diceBorrar, guardar } from '../datos';
-import { avisar, est, volver } from '../estado';
+import { Animal, KEY, cuantos, diceBorrar, rescatados } from '../datos';
+import { avisar, est, guardarYAvisar, volver } from '../estado';
 import { guardarCopia, textoCopia } from './CopiaSeguridad';
 
 // Acción destructiva: advertencia y escribir BORRAR. La confirmación va dentro de la pantalla, no en ventanitas
@@ -30,10 +30,10 @@ export function ConfirmarBorrado({ boton, aviso, alConfirmar }: { boton: string;
 export function EliminarDatos() {
   const n = Object.keys(est.db.animales).length;
   const borrarTodo = () => {
-    est.db = { animales: {} }; guardar(est.db);
-    try { localStorage.removeItem(KEY + '.respaldo') } catch { /* sin almacenamiento */ }
+    est.db = { animales: {} };
+    try { for (const k of [KEY + '.respaldo', ...rescatados()]) localStorage.removeItem(k) } catch { /* sin almacenamiento */ }
     est.filtro.q = ''; est.filtro.finca = ''; est.filtro.verRet = false;
-    volver(); avisar('🗑️ Se borraron todos los datos');
+    volver(); guardarYAvisar('🗑️ Se borraron todos los datos');
   };
   return (
     <details class="peligro">
@@ -49,7 +49,7 @@ export function EliminarDatos() {
 }
 
 export function EliminarAnimal({ a }: { a: Animal }) {
-  const eliminar = () => { delete est.db.animales[a.arete]; guardar(est.db); volver(); avisar('🗑️ Animal eliminado') };
+  const eliminar = () => { delete est.db.animales[a.arete]; volver(); guardarYAvisar('🗑️ Animal eliminado') };
   return (
     <details class="peligro">
       <summary>🗑️ Eliminar este animal</summary>

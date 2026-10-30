@@ -1,6 +1,6 @@
 import { h } from '../jsx';
-import { Animal, CAMPOS, CATEGORIAS, areteValido, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, guardar, hoy, kilos, nuevoId, ordenados, pesajeDe, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
-import { abrir, avisar, est, ir, mostrarReporte, render, volver } from '../estado';
+import { Animal, CAMPOS, CATEGORIAS, areteValido, esRepeticion, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, hoy, kilos, nuevoId, ordenados, pesajeDe, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
+import { abrir, est, guardarYAvisar, ir, mostrarReporte, render, volver } from '../estado';
 import { EliminarAnimal } from '../componentes/EliminarDatos';
 import { NombreYArete } from '../componentes/Arete';
 
@@ -15,7 +15,7 @@ function Formulario({ a }: { a: Animal | null }) {
     if (a && arete !== a.arete) delete db.animales[a.arete];
     for (const k of CAMPOS) (nuevo as any)[k] = val(k);
     nuevo.creado ??= hoy();
-    db.animales[arete] = nuevo; guardar(db); abrir(arete); avisar('✅ Animal guardado');
+    db.animales[arete] = nuevo; guardarYAvisar('✅ Animal guardado'); abrir(arete);
     // Los otros teléfonos no saben del cambio: al juntar copias quedaría el animal dos veces.
     if (a && arete !== a.arete) alert(`El arete cambió de ${a.arete} a ${arete}.\n\nSi este animal también está en otros teléfonos, cámbielo allá igual. Si no, al pasar los datos quedará repetido.`);
   };
@@ -23,11 +23,11 @@ function Formulario({ a }: { a: Animal | null }) {
     <form class="card" onSubmit={guardarAnimal}>
       <h2>{a ? 'Cambiar datos del animal ' + a.arete : 'Agregar un animal'}</h2>
       <label for="f-arete">Número de arete (obligatorio)</label>
-      <input id="f-arete" name="arete" required inputmode="numeric" value={a?.arete ?? est.nuevo.arete ?? ''} />
+      <input id="f-arete" name="arete" required maxlength="40" inputmode="numeric" value={a?.arete ?? est.nuevo.arete ?? ''} />
       <label for="f-nombre">Nombre (si tiene)</label>
-      <input id="f-nombre" name="nombre" value={a?.nombre ?? est.nuevo.nombre ?? ''} />
+      <input id="f-nombre" name="nombre" maxlength="80" value={a?.nombre ?? est.nuevo.nombre ?? ''} />
       <label for="f-finca">Finca</label>
-      <input id="f-finca" name="finca" list="listaFincas" value={a?.finca ?? est.nuevo.finca ?? ''} />
+      <input id="f-finca" name="finca" maxlength="80" list="listaFincas" value={a?.finca ?? est.nuevo.finca ?? ''} />
       <datalist id="listaFincas">{fincas(est.db).map(f => <option value={f} />)}</datalist>
       <details open={!a && !!est.nuevo.nac}>
         <summary>Más datos (opcional)</summary>
@@ -39,11 +39,11 @@ function Formulario({ a }: { a: Animal | null }) {
         <label for="f-sexo">Sexo</label>
         <select id="f-sexo" name="sexo" value={a?.sexo || 'H'}><option value="H">Hembra</option><option value="M">Macho</option></select>
         <label for="f-raza">Raza</label>
-        <input id="f-raza" name="raza" value={a?.raza ?? est.nuevo.raza ?? ''} />
+        <input id="f-raza" name="raza" maxlength="80" value={a?.raza ?? est.nuevo.raza ?? ''} />
         <label for="f-cat">Categoría</label>
         <select id="f-cat" name="categoria" value={a?.categoria ?? ''}><option value="">—</option>{CATEGORIAS.map(c => <option>{c}</option>)}</select>
         <label for="f-notas">Notas</label>
-        <textarea id="f-notas" name="notas" rows="2" value={a?.notas ?? est.nuevo.notas ?? ''}></textarea>
+        <textarea id="f-notas" name="notas" maxlength="1000" rows="2" value={a?.notas ?? est.nuevo.notas ?? ''}></textarea>
       </details>
       <button class="pri grande">💾 Guardar animal</button>
     </form>
@@ -78,13 +78,13 @@ function NuevoEvento({ a }: { a: Animal }) {
       const hacia = val('destino');
       if (!hacia) return alert('Escriba o elija la finca a la que pasó.');
       if (hacia === a.finca) return alert(`El animal ya está en ${hacia}.`);
-      trasladar(a, hacia, val('fecha'), val('nota')); guardar(est.db); render(); return avisar('✅ Pasó a ' + hacia);
+      trasladar(a, hacia, val('fecha'), val('nota')); render(); guardarYAvisar('✅ Pasó a ' + hacia); return;
     }
     const ev = { id: nuevoId(), tipo: tipo.value as TipoEvento, fecha: val('fecha'), nota: val('nota'), motivo: undefined as string | undefined };
     if (ev.tipo === 'retiro') ev.motivo = motivo.value;
     else delete ev.motivo;
     if (ev.tipo === 'parto') est.criaDe = a.arete;
-    a.eventos.push(ev); guardar(est.db); render(); avisar('✅ Guardado: ' + (ev.motivo ?? EVENTOS[ev.tipo]));
+    a.eventos.push(ev); render(); guardarYAvisar('✅ Guardado: ' + (esRepeticion(a, ev) ? 'Celo (repetición)' : ev.motivo ?? EVENTOS[ev.tipo]));
   };
   return (
     <form class="card" onSubmit={enviar} ref={(el: HTMLElement) => (form = el)}>
@@ -103,14 +103,14 @@ function NuevoEvento({ a }: { a: Animal }) {
       </div>
       <div class="hide" ref={(el: HTMLElement) => (destinoBox = el)}>
         <label for="f-destino">¿A qué finca pasó? (ahora está en {a.finca || 'ninguna'})</label>
-        <input id="f-destino" name="destino" list="listaDestinos" />
+        <input id="f-destino" name="destino" maxlength="80" list="listaDestinos" />
         <datalist id="listaDestinos">{fincas(est.db).filter(f => f !== a.finca).map(f => <option value={f} />)}</datalist>
       </div>
       <label for="f-fecha">Fecha</label>
       <input id="f-fecha" name="fecha" type="date" required value={hoy()} />
       <p class="ayuda">Ya tiene la fecha de hoy. Toque el cuadro si fue otro día.</p>
       <label for="f-nota">Nota (si quiere)</label>
-      <input id="f-nota" name="nota" placeholder="Ej.: toro Pinto, cría macho" />
+      <input id="f-nota" name="nota" maxlength="500" placeholder="Ej.: toro Pinto, cría macho" />
       <button class="pri grande" ref={(el: HTMLElement) => (guardarBtn = el)}>💾 Guardar lo que pasó</button>
     </form>
   );
@@ -123,7 +123,7 @@ function borrarEvento(a: Animal, id: string, boton: HTMLButtonElement) {
     setTimeout(() => { boton.dataset.seguro = ''; boton.textContent = 'Borrar' }, 4000);
     return;
   }
-  a.eventos = a.eventos.filter(x => x.id !== id); guardar(est.db); render(); avisar('✅ Borrado');
+  a.eventos = a.eventos.filter(x => x.id !== id); render(); guardarYAvisar('✅ Borrado');
 }
 
 // Últimos pesajes de la vaca, con flecha de si subió o bajó respecto al anterior.
@@ -162,7 +162,7 @@ function Historial({ a }: { a: Animal }) {
       <ul>
         {eventos.length ? eventos.map(e => (
           <li class="ev">
-            <span><b>{textoEvento(e)}</b><br />
+            <span><b>{textoEvento(e, a)}</b><br />
               <span class="mut">{fmt(e.fecha)}{e.nota ? ' · ' + e.nota : ''}</span></span>
             <button class="borrar" onClick={(ev: Event) => borrarEvento(a, e.id, ev.currentTarget as HTMLButtonElement)}>Borrar</button>
           </li>

@@ -28,6 +28,9 @@ const esFecha = (s: unknown): s is string => typeof s === 'string' && /^\d{4}-\d
 const texto = (v: unknown, max: number) => typeof v === 'string' ? v.slice(0, max) : '';
 const kilosValidos = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= MAX_KILOS ? v : undefined;
 
+// Campos que venían con algo y quedaron distintos: texto recortado, tipo raro o kilos imposibles.
+const perdidos = (o: any, l: any, campos: string[]) => campos.filter(k => o[k] != null && o[k] !== l[k]).length;
+
 export function limpiarEvento(e: any): Evento | null {
   if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !e.id || !Object.hasOwn(EVENTOS, e.tipo) || !esFecha(e.fecha)) return null;
   const ev: Evento = { id: e.id.slice(0, 40), tipo: e.tipo, fecha: e.fecha, nota: texto(e.nota, 500) };
@@ -41,14 +44,15 @@ export function limpiarEvento(e: any): Evento | null {
 
 export function limpiarAnimal(a: any): { animal: Animal; descartados: number } | null {
   if (!a || typeof a !== 'object' || !areteValido(a.arete) || !Array.isArray(a.eventos)) return null;
-  const eventos = a.eventos.map(limpiarEvento).filter((e: Evento | null): e is Evento => !!e);
+  let cortados = 0;
+  const eventos = a.eventos.flatMap((o: any) => { const e = limpiarEvento(o); if (!e) return []; cortados += perdidos(o, e, ['nota', 'motivo', 'desde', 'hacia', 'am', 'pm']); return [e] });
   const animal: Animal = {
     arete: a.arete.trim(), nombre: texto(a.nombre, 80), tipo: a.tipo === 'carne' ? 'carne' : 'leche', nac: esFecha(a.nac) ? a.nac : '',
     finca: texto(a.finca, 80), sexo: a.sexo === 'M' ? 'M' : 'H', raza: texto(a.raza, 80), categoria: texto(a.categoria, 40),
     notas: texto(a.notas, 1000), eventos,
   };
   if (esFecha(a.creado)) animal.creado = a.creado;
-  return { animal, descartados: a.eventos.length - eventos.length };
+  return { animal, descartados: a.eventos.length - eventos.length + cortados + perdidos(a, animal, ['nombre', 'nac', 'finca', 'raza', 'categoria', 'notas']) };
 }
 
 export function cargar(): Db {
@@ -57,18 +61,27 @@ export function cargar(): Db {
   try {
     crudo = localStorage.getItem(KEY);
     const datos = crudo ? JSON.parse(crudo) : null;
-    for (const v of Object.values(datos?.animales ?? {})) { const l = limpiarAnimal(v); if (l) db.animales[l.animal.arete] = l.animal }
+    if (crudo && (!datos || typeof datos.animales !== 'object')) throw new Error('sin animales');
+    let malos = 0;
+    for (const v of Object.values(datos?.animales ?? {})) { const l = limpiarAnimal(v); if (l) { db.animales[l.animal.arete] = l.animal; malos += l.descartados } else malos++ }
+    if (malos) {
+      // Primero el rescate; lo limpio se guarda solo si el rescate quedó, y así el aviso no se repite en cada apertura.
+      try { localStorage.setItem(KEY + '.danado-' + Date.now(), crudo!); localStorage.setItem(KEY, JSON.stringify(db)) } catch { /* sin espacio */ }
+      alert(`Había ${malos === 1 ? '1 dato dañado o demasiado largo' : malos + ' datos dañados o demasiado largos'} y se quitó de la lista. Lo guardado antes quedó aparte: en “⚙️ Copia de seguridad” puede guardar los datos rescatados.`);
+    }
   } catch {
     // Se guarda lo ilegible aparte antes de seguir: el próximo guardado no debe borrar lo único que había.
     try { if (crudo) localStorage.setItem(KEY + '.danado-' + Date.now(), crudo) } catch { /* sin espacio */ }
-    alert('No se pudieron leer los datos guardados. Quedó una copia aparte en el teléfono. Recupere su copia de seguridad.');
+    alert('No se pudieron leer los datos guardados. Quedaron aparte: en “⚙️ Copia de seguridad” puede guardar los datos rescatados. Recupere su copia de seguridad.');
   }
   return db;
 }
 export function guardar(db: Db) {
-  try { localStorage.setItem(KEY, JSON.stringify(db)) }
-  catch (e) { alert('¡No se pudo guardar! Exporte un respaldo ahora. ' + (e as Error).message) }
+  try { localStorage.setItem(KEY, JSON.stringify(db)); return true }
+  catch { return false }
 }
+// Lo que se apartó porque no se pudo leer o validar al cargar.
+export const rescatados = () => { try { return Object.keys(localStorage).filter(k => k.startsWith(KEY + '.danado-')) } catch { return [] } };
 export function ultimoRespaldo(): string | null { try { return localStorage.getItem(KEY + '.respaldo') } catch { return null } }
 export function marcarRespaldo() { try { localStorage.setItem(KEY + '.respaldo', hoy()) } catch { /* sin almacenamiento */ } }
 
@@ -94,14 +107,23 @@ export const ordenados = (a: Animal) => [...a.eventos].sort((x, y) => x.fecha.lo
 export const retiro = (a: Animal) => a.eventos.find(e => e.tipo === 'retiro');
 export const fincas = (db: Db) => [...new Set(Object.values(db.animales).map(a => a.finca).filter(Boolean))].sort();
 
-// Gestación abierta: última monta/preñez sin parto ni aborto posterior. Fecha base = la monta más reciente antes de esa preñez.
-export function prenezAbierta(a: Animal) {
+// Gestación abierta: última monta/preñez sin parto, aborto ni celo posterior. Fecha base = la monta más reciente antes de esa preñez.
+function baseAbierta(eventos: Evento[]) {
   let base: string | null = null;
-  for (const e of ordenados(a)) {
+  for (const e of eventos) {
     if (e.tipo === 'monta') base = e.fecha;
     else if (e.tipo === 'prenez' && !base) base = e.fecha;
-    else if (e.tipo === 'parto' || e.tipo === 'aborto') base = null;
+    else if (e.tipo === 'parto' || e.tipo === 'aborto' || e.tipo === 'celo') base = null; // volver a celo anula la preñez
   }
+  return base;
+}
+// Celo de una vaca que estaba preñada: es una repetición y anuló esa preñez.
+export function esRepeticion(a: Animal, e: Evento) {
+  const o = ordenados(a);
+  return e.tipo === 'celo' && a.sexo !== 'M' && !!baseAbierta(o.slice(0, o.indexOf(e)));
+}
+export function prenezAbierta(a: Animal) {
+  const base = a.sexo === 'M' ? null : baseAbierta(ordenados(a));
   if (!base) return null;
   const parto = sumarDias(base, GESTACION);
   return { parto, secado: a.tipo === 'leche' ? sumarDias(parto, -SECADO_ANTES) : null };
@@ -141,7 +163,7 @@ const ultimo = (a: Animal, t: TipoEvento) => ordenados(a).filter(e => e.tipo ===
 export const estaSeca = (a: Animal) => a.tipo === 'leche' && (ultimo(a, 'secado')?.fecha ?? '') > (ultimo(a, 'parto')?.fecha ?? '');
 export const ultimoPesaje = (a: Animal) => ultimo(a, 'pesaje');
 // Cómo se nombra un evento en pantalla.
-export const textoEvento = (e: Evento) => e.tipo === 'retiro' ? 'Salida: ' + e.motivo
+export const textoEvento = (e: Evento, a: Animal) => esRepeticion(a, e) ? 'Celo (repetición: se anuló la preñez)' : e.tipo === 'retiro' ? 'Salida: ' + e.motivo
   : e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}`
   : e.tipo === 'pesaje' ? `Pesaje: ${kilos(totalPesaje(e))}` : EVENTOS[e.tipo];
 // Último evento de manejo (los pesajes van aparte).

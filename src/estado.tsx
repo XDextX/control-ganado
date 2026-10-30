@@ -1,6 +1,6 @@
 // Estado compartido de la app y navegación entre pantallas. Todo componente lee y cambia `est` y luego llama render().
 import { h } from './jsx';
-import { Animal, cargar, hoy } from './datos';
+import { Animal, cargar, guardar, hoy } from './datos';
 import { TipoReporte } from './reportes';
 import { detenerCamara } from './qr';
 
@@ -62,6 +62,15 @@ export async function compartir(file: File, titulo: string): Promise<'compartido
     if ((e as Error).name === 'AbortError') return 'cancelado';
     descargar(file, file.name); return 'descargado';
   }
+}
+
+// Guarda y lo dice en pantalla (las ventanitas del navegador pueden estar bloqueadas). Sin texto, solo avisa si falló.
+export function guardarYAvisar(texto = '') {
+  if (guardar(est.db)) { if (texto) avisar(texto); return true }
+  document.querySelector('.aviso-mal')?.remove();
+  const el = <div class="aviso-ok aviso-mal" role="alert" onClick={() => el.remove()}>⚠️ No se pudo guardar. Si cierra la app se perderá lo último. Envíe una copia de seguridad ahora. (Toque para cerrar)</div> as HTMLElement;
+  document.body.appendChild(el);
+  return false;
 }
 
 // Mensaje grande que confirma que algo quedó guardado.
