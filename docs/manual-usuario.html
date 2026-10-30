@@ -17,10 +17,12 @@ b.btn.blanco{background:#fff;color:#1a1a1a;border:1px solid #888}
 b.btn.rojo{background:#a32020}
 li{margin:4px 0}
 .indice{columns:2;font-size:11pt}
+img.cap{float:right;width:190px;margin:0 0 10px 16px;border:1px solid #bbb;border-radius:8px}
+h2{clear:both}
 </style></head><body>
 
 <h1>🐄 Registro de Ganado</h1>
-<p class="sub">Manual de uso · versión 1.1 · octubre de 2026</p>
+<p class="sub">Manual de uso · versión 1.2 · octubre de 2026</p>
 
 <div class="indice"><ol>
 <li>Qué es y cómo instalarla</li><li>La pantalla principal</li><li>Agregar un animal</li><li>Anotar lo que pasó</li>
@@ -36,12 +38,23 @@ li{margin:4px 0}
 <h3>Instalarla en el celular</h3>
 <ol>
 <li>Con señal, abra <b>https://xdextx.github.io/control-ganado/</b> y espere a que cargue.</li>
-<li>Toque el menú <b>⋮</b> (tres puntitos) → <b>Agregar a pantalla principal</b>. En iPhone: botón <b>Compartir</b> → <b>Agregar a inicio</b>.</li>
+<li>Siga los pasos de su navegador (tabla de abajo).</li>
 <li>Aparece el ícono verde de la vaca. Desde ahí la app abre al instante, con o sin señal.</li>
 </ol>
-<div class="tip">Ábrala siempre desde el mismo ícono. Si la abre desde otro navegador, no verá los mismos datos. Cuando haya una versión nueva, el teléfono la baja solo y se ve la <b>siguiente vez</b> que abra la app.</div>
+<table>
+<tr><th>Navegador</th><th>Pasos</th></tr>
+<tr><td><b>Chrome</b> (Android) — recomendado</td><td>Tres puntitos <b>⋮</b> arriba a la derecha → <b>Agregar a pantalla principal</b> (o <b>Instalar app</b>) → <b>Instalar</b></td></tr>
+<tr><td><b>Samsung Internet</b></td><td>Menú <b>☰</b> abajo → <b>Agregar página a</b> → <b>Pantalla de inicio</b></td></tr>
+<tr><td><b>Edge</b> (Android)</td><td>Tres puntitos <b>…</b> abajo → <b>Agregar al teléfono</b> (o <b>Agregar a pantalla de inicio</b>)</td></tr>
+<tr><td><b>Firefox</b> (Android)</td><td>Tres puntitos <b>⋮</b> → <b>Instalar</b> (o <b>Agregar a pantalla de inicio</b>)</td></tr>
+<tr><td><b>Opera / Opera GX</b></td><td>Menú → <b>Agregar a…</b> → <b>Pantalla de inicio</b>. En Opera la copia de seguridad no se descarga bien y el ícono puede abrir varias ventanas: mejor use Chrome.</td></tr>
+<tr><td><b>Safari</b> (iPhone)</td><td>Botón <b>Compartir</b> (cuadro con flecha ↑) → <b>Agregar a inicio</b> → <b>Agregar</b>. En iPhone solo funciona desde Safari.</td></tr>
+</table>
+<p>Si el teléfono pregunta si el navegador puede agregar íconos, toque <b>Permitir</b>.</p>
+<div class="tip">Ábrala siempre desde el mismo ícono. Si la abre desde otro navegador, no verá los mismos datos: <b>cada navegador guarda los suyos</b>. Para cambiar de navegador, primero pase sus animales con una copia (sección 10). Cuando haya una versión nueva, el teléfono la baja solo y se ve la <b>siguiente vez</b> que abra la app.</div>
 
 <h2>2. La pantalla principal</h2>
+<img class="cap" src="capturas/lista.png" alt="Pantalla principal con el aviso de una vaca y la lista de animales">
 <p>De arriba hacia abajo:</p>
 <ul>
 <li><b class="btn">📷 Escanear código QR</b>: para recibir datos de otro teléfono o abrir un animal desde el QR del corral.</li>
@@ -94,12 +107,13 @@ li{margin:4px 0}
 <p><b>¿Se equivocó?</b> En el historial, toque <b class="btn rojo">Borrar</b> junto al evento. El botón cambia a “¿Seguro? Toque otra vez”; tóquelo de nuevo para borrarlo.</p>
 
 <h2>5. La ficha del animal</h2>
+<img class="cap" src="capturas/ficha.png" alt="Ficha de la vaca Pinta: preñada, parto probable y último pesaje">
 <ul>
 <li><b>Arriba:</b> quién es, su finca y datos, si está preñada (con parto y secado probables) y su último pesaje.</li>
 <li><b>¿Qué pasó con este animal?</b> (sección 4).</li>
 <li><b>🥛 Pesajes de leche:</b> los últimos 5, con flecha verde ▲ si subió o roja ▼ si bajó.</li>
 <li><b>Historial:</b> todo lo anotado, del más nuevo al más viejo.</li>
-<li><b>✏️ Cambiar datos del animal:</b> arete, nombre, finca y más datos. Está cerrado para no cambiarlos sin querer.</li>
+<li><b>✏️ Cambiar datos del animal:</b> arete, nombre, finca y más datos. Está cerrado para no cambiarlos sin querer. Si cambia el <b>número de arete</b>, cámbielo también en los otros teléfonos; si no, al pasar los datos el animal quedará repetido.</li>
 <li><b>📲 Compartir o imprimir:</b> reporte del animal, QR para pasarlo a otro teléfono y QR para el corral.</li>
 <li><b>🗑️ Eliminar este animal</b> (sección 13).</li>
 </ul>
@@ -114,9 +128,10 @@ li{margin:4px 0}
 <div class="tip">Si solo anotó la preñez confirmada, sin la monta, el parto se calcula desde la confirmación y saldrá más tarde de lo real. Anote siempre la monta.</div>
 
 <h2>7. Pesaje de leche</h2>
+<img class="cap" src="capturas/pesaje.png" alt="Planilla del pesaje: kilos de la mañana y la tarde de cada vaca">
 <ol>
 <li>Toque <b class="btn blanco">🥛 Pesaje de leche</b> en la pantalla principal.</li>
-<li>Elija la <b>finca</b> y la <b>fecha</b> (viene la de hoy).</li>
+<li>Elija la <b>finca</b> y la <b>fecha</b> (siempre viene la de hoy, aunque la app haya quedado abierta desde ayer).</li>
 <li>Aparece cada vaca de leche con dos cuadros: <b>☀️ Mañana (kg)</b> y <b>🌙 Tarde (kg)</b>. Debajo dice cuánto dio <b>la vez pasada</b>.</li>
 <li>Escriba los kilos (puede usar coma o punto: <i>12,5</i>). La tecla <b>Siguiente</b> del teclado pasa al próximo cuadro. Deje en blanco la vaca que no se pesó.</li>
 <li>Abajo, siempre a la vista, está el total y <b class="btn">💾 Guardar pesaje</b>.</li>
@@ -138,6 +153,7 @@ li{margin:4px 0}
 <p>Para mover un solo animal, también puede usar <b>Otro → 🚚 Pasó a otra finca</b> en su ficha.</p>
 
 <h2>9. Reportes</h2>
+<img class="cap" src="capturas/reporte.png" alt="Reporte de próximos partos y secados con los botones para enviarlo">
 <p>Toque <b class="btn blanco">📋 Reportes</b> y elija:</p>
 <ul>
 <li><b>🐄 Animales por finca</b> · <b>🍼 Próximos partos y secados</b> · <b>📤 Salidas del mes</b> · <b>🚚 Traslados del mes</b> · <b>🥛 Pesajes de leche</b> (total por finca, promedio y cambio de cada vaca).</li>
@@ -151,11 +167,20 @@ li{margin:4px 0}
 </ul>
 
 <h2>10. Copia de seguridad</h2>
+<img class="cap" src="capturas/copia.png" alt="Sección Copia de seguridad con los botones para enviar, guardar, recuperar y pegar la copia">
 <p>Al final de la pantalla principal, en <b>⚙️ Copia de seguridad</b>:</p>
 <ul>
-<li><b class="btn blanco">📲 Enviar una copia</b> (o <b>💾 Guardar una copia</b> en la computadora): crea un archivo con <b>todos</b> sus datos. Mándeselo por mensaje a usted mismo o guárdelo en un lugar seguro.</li>
-<li><b class="btn blanco">📂 Recuperar una copia</b>: elija el archivo. <b>Se suma</b> a lo que ya tiene: agrega animales y eventos que falten y <b>no borra nada</b>. Si el archivo trae datos dañados, los ignora y le dice cuántos.</li>
+<li><b class="btn blanco">📲 Enviar una copia (por mensaje)</b>: abre el menú de compartir con un archivo que tiene <b>todos</b> sus datos. Mándeselo a usted mismo o a otro teléfono. En la computadora el botón dice <b>💾 Guardar una copia</b>.</li>
+<li><b class="btn blanco">💾 Guardar la copia en este teléfono</b>: guarda el archivo en <b>Descargas</b>.</li>
+<li><b class="btn blanco">📂 Recuperar una copia</b>: elija el archivo.</li>
 </ul>
+<h3>¿No se puede guardar el archivo?</h3>
+<p>Algunos navegadores (como Opera) o las páginas abiertas desde un mensaje no dejan guardar archivos. Entonces use texto:</p>
+<ul>
+<li><b class="btn blanco">✉️ Enviar la copia como texto</b>: la manda como un mensaje de texto. Si el teléfono no deja compartir, la copia para pegarla, o la muestra marcada para que la copie con el dedo.</li>
+<li>Para recuperarla: copie ese mensaje, péguelo en <b>Pegue aquí una copia recibida como texto</b> y toque <b class="btn blanco">📥 Recuperar la copia pegada</b>.</li>
+</ul>
+<p>Recuperar una copia, por archivo o por texto, <b>se suma</b> a lo que ya tiene: agrega los animales y eventos que falten y <b>no borra nada</b>. Si un animal no tenía nombre, raza u otro dato y la copia sí lo trae, se completa; lo que ya estaba escrito no se cambia. Si la copia trae datos dañados, los ignora y le dice cuántos.</p>
 <div class="nota">Guarde una copia <b>seguido</b>. Si borra los datos del navegador, desinstala la app o cambia de teléfono, solo se recupera lo que esté en una copia. La app le recuerda si lleva 7 días sin hacerla.</div>
 
 <h2>11. Pasar datos a otro teléfono (QR)</h2>
@@ -185,6 +210,9 @@ li{margin:4px 0}
 <h2>15. Preguntas frecuentes</h2>
 <p><b>¿Se pierden los datos si cierro la app o apago el teléfono?</b> No, quedan guardados.</p>
 <p><b>¿Cuándo sí se pierden?</b> Si borra los datos del navegador, desinstala el navegador o cambia de teléfono. Por eso, copia de seguridad seguido.</p>
+<p><b>Al tocar “atrás” en el teléfono, ¿se cierra la app?</b> No: vuelve a la pantalla anterior, igual que el botón <b>← Volver</b>. Solo en la pantalla principal cierra la app.</p>
+<p><b>Cambié el nombre de una vaca y en el otro teléfono no cambió.</b> Al pasar una copia, se completan los datos que en el otro teléfono estaban <b>vacíos</b>, pero no se cambian los que ya tenían algo escrito. Corríjalo también en el otro teléfono.</p>
+<p><b>No se descarga la copia de seguridad.</b> Use <b>✉️ Enviar la copia como texto</b> (sección 10), o use la app en Chrome.</p>
 <p><b>¿Funciona sin señal?</b> Sí, después de abrirla una vez con señal. También abre al instante con señal mala.</p>
 <p><b>Mi familiar no ve los animales que yo anoté.</b> Es normal: cada teléfono tiene sus datos. Páseselos con “Pasar lo anotado” o con una copia.</p>
 <p><b>Dice “Ya existe un animal con el arete…”.</b> Ese arete ya está. Búsquelo por sus últimos números (puede estar entre los vendidos).</p>
