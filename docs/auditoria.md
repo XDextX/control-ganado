@@ -1,7 +1,7 @@
 # Auditoría de fallos y vulnerabilidades
 
 - **Fecha:** 28 de octubre de 2026
-- **Versión revisada:** `v1.0.0` (commit `250c0d3`)
+- **Versión revisada:** `v1.0.0` (commit `0d47a4b`)
 - **Alcance:** todo `src/`, `public/sw.js`, `index.html`, `vite.config.ts` y las dependencias (`npm audit`).
 
 La app no tiene servidor ni cuentas: los datos viven en el teléfono (`localStorage`) y solo entran por tres vías: lo que la persona escribe, una **copia de seguridad** (archivo) y un **código QR**. Por eso la superficie de ataque es pequeña, y lo más importante es que un dato dañado o malicioso que llegue por copia o QR no pueda romper la app ni borrar información.
@@ -119,11 +119,15 @@ Errores de datos encontrados después, ya corregidos:
 | 18 | Media | Marcas viejas en Mover animales fallaban o movían un animal que ya no estaba en la lista | Se quitan las marcas de animales que ya no están en la finca |
 | 19 | Media | Recuperar una copia ocultaba el recordatorio de respaldo; los datos no pedían almacenamiento persistente | Recuperar o copiar al portapapeles ya no cuenta como respaldo; se pide `storage.persist` |
 
+### Aretes y fincas reales en el repositorio (corregido)
+
+Seis aretes oficiales y los nombres de las dos fincas estaban en el catálogo de componentes, las pruebas y el manual. Se reemplazaron por valores inventados en **todo el historial** (reescrito el 30 de octubre de 2026), y por eso cambiaron los identificadores de los commits. Para datos de ejemplo use siempre valores inventados.
+
 ## Revisado sin hallazgos
 
 - **Inyección de HTML (XSS):** todo el texto se agrega con `document.createTextNode` (ver `src/jsx.ts`) y no se usa `innerHTML`. Los enlaces de correo y de reporte en el repositorio codifican el texto con `encodeURIComponent`.
 - **Comentarios:** solo envían lo que la persona escribe, nunca datos del ganado.
-- **Respaldos:** la carpeta del proyecto ignora `respaldo-*.json` y `ganado-copia-*.txt` (`.gitignore`), así que los aretes oficiales no llegan al repositorio público.
+- **Respaldos:** la carpeta del proyecto ignora `respaldo-*.json` y `ganado-copia-*.txt` (`.gitignore`), así que los respaldos no llegan al repositorio público.
 - **Service worker:** solo intercepta pedidos del mismo sitio y guarda la página nueva después de sus archivos, para no dejar versiones a medias.
 - **Espacio:** un año de pesajes de 50 vacas ocupa menos de 1 MB, lejos del límite de `localStorage` (~5 MB).
 

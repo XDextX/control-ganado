@@ -80,6 +80,22 @@ export function guardar(db: Db) {
   try { localStorage.setItem(KEY, JSON.stringify(db)); return true }
   catch { return false }
 }
+// Hato inventado para conocer la app. Solo vive en memoria (ver est.ejemplo).
+export function datosDeEjemplo(desde = hoy()): Db {
+  const d = (n: number) => sumarDias(desde, n);
+  const ev = (id: string, tipo: TipoEvento, fecha: string, extra: Partial<Evento> = {}): Evento => ({ id: 'ej' + id + 'abcd', tipo, fecha, nota: '', ...extra });
+  const vaca = (arete: string, nombre: string, finca: string, eventos: Evento[], extra: Partial<Animal> = {}): Animal =>
+    ({ arete, nombre, tipo: 'leche', nac: '2020-03-10', finca, sexo: 'H', raza: 'Jersey', categoria: 'Vaca', notas: '', eventos, ...extra });
+  const lista = [
+    vaca('CR-001-4521', 'Pinta', 'La Esperanza', [ev('01', 'monta', d(-262)), ev('02', 'pesaje', d(-7), { am: 11.5, pm: 9 }), ev('03', 'pesaje', d(-1), { am: 12, pm: 9.5 })]),
+    vaca('CR-001-4533', 'Canela', 'La Esperanza', [ev('04', 'parto', d(-120)), ev('05', 'pesaje', d(-7), { am: 14, pm: 11 }), ev('06', 'pesaje', d(-1), { am: 13.5, pm: 11 })]),
+    vaca('CR-001-4547', 'Manchas', 'La Esperanza', [ev('07', 'monta', d(-30)), ev('08', 'celo', d(-9))]),
+    vaca('CR-001-4560', '', 'La Esperanza', [ev('09', 'secado', d(-20))]),
+    vaca('CR-002-1102', 'Negra', 'El Roble', [ev('10', 'monta', d(-100))], { tipo: 'carne', raza: 'Brahman' }),
+    vaca('CR-002-1118', '', 'El Roble', [], { tipo: 'carne', raza: 'Brahman', sexo: 'M', categoria: 'Toro' }),
+  ];
+  return { animales: Object.fromEntries(lista.map(a => [a.arete, a])) };
+}
 // Lo que se apartó porque no se pudo leer o validar al cargar.
 export const rescatados = () => { try { return Object.keys(localStorage).filter(k => k.startsWith(KEY + '.danado-')) } catch { return [] } };
 export function ultimoRespaldo(): string | null { try { return localStorage.getItem(KEY + '.respaldo') } catch { return null } }

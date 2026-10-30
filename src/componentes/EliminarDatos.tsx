@@ -1,6 +1,6 @@
 import { h } from '../jsx';
 import { Animal, KEY, cuantos, diceBorrar, rescatados } from '../datos';
-import { avisar, est, guardarYAvisar, volver } from '../estado';
+import { avisar, est, guardarYAvisar, verEjemplo, volver } from '../estado';
 import { guardarCopia, textoCopia } from './CopiaSeguridad';
 
 // Acción destructiva: advertencia y escribir BORRAR. La confirmación va dentro de la pantalla, no en ventanitas
@@ -30,6 +30,7 @@ export function ConfirmarBorrado({ boton, aviso, alConfirmar }: { boton: string;
 export function EliminarDatos() {
   const n = Object.keys(est.db.animales).length;
   const borrarTodo = () => {
+    if (est.ejemplo) return verEjemplo(false); // en el ejemplo no hay nada real que borrar
     est.db = { animales: {} };
     try { for (const k of [KEY + '.respaldo', ...rescatados()]) localStorage.removeItem(k) } catch { /* sin almacenamiento */ }
     est.filtro.q = ''; est.filtro.finca = ''; est.filtro.verRet = false;

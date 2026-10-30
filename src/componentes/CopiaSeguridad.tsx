@@ -1,6 +1,6 @@
 import { h } from '../jsx';
 import { KEY, cuantos, diasHasta, fusionar, hoy, marcarRespaldo, rescatados, ultimoRespaldo } from '../datos';
-import { avisar, compartir, descargar, est, guardarYAvisar, puedeCompartir, render, volver } from '../estado';
+import { avisar, compartir, descargar, est, guardarYAvisar, puedeCompartir, render, verEjemplo, volver } from '../estado';
 
 // Como texto (.txt): algunos navegadores de teléfono no dejan compartir archivos .json, pero sí .txt. El contenido es el mismo.
 const archivoCopia = () => new File([JSON.stringify(est.db, null, 1)], `ganado-copia-${hoy()}.txt`, { type: 'text/plain' });
@@ -15,6 +15,7 @@ export async function guardarCopia() {
 
 export function CopiaSeguridad() {
   const juntar = (texto: string, que: string) => {
+    if (est.ejemplo) verEjemplo(false); // una copia real nunca se junta con el ejemplo, que no se guarda
     try {
       const n = fusionar(est.db, JSON.parse(texto.trim()));
       // Recuperar no cuenta como respaldo: lo juntado no está en ninguna otra parte.

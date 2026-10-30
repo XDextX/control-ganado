@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { pesajes, traslados } from './reportes';
-import { Animal, Db, KEY, alertas, cargar, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
+import { ficha, inventario, partos, pesajes, salidas, traslados } from './reportes';
+import { Animal, Db, KEY, alertas, cargar, datosDeEjemplo, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
@@ -244,5 +244,30 @@ describe('revisión 2026-10-30', () => {
   });
   it('un macho nunca tiene fecha de parto', () => {
     expect(prenezAbierta({ ...vaca('carne', [{ id: '1', tipo: 'monta', fecha: '2026-01-01', nota: '' }]), sexo: 'M' })).toBeNull();
+  });
+});
+
+describe('ejemplo y reportes', () => {
+  const hoyEj = '2026-06-15', db = datosDeEjemplo(hoyEj);
+  it('el ejemplo pasa la validación y muestra avisos', () => {
+    for (const a of Object.values(db.animales)) expect(limpiarAnimal(a)?.descartados).toBe(0);
+    expect(alertas(db, hoyEj).length).toBeGreaterThan(0);
+  });
+  it('inventario separa por finca y no cuenta las salidas', () => {
+    const d: Db = JSON.parse(JSON.stringify(db));
+    d.animales['CR-002-1118'].eventos.push({ id: 'x1', tipo: 'retiro', fecha: hoyEj, nota: '', motivo: 'Venta' });
+    const r = inventario(d);
+    expect(r.secciones.map(s => s.titulo).join()).toContain('El Roble');
+    expect(r.secciones.flatMap(s => s.filas).flat().join()).not.toContain('CR-002-1118');
+    expect(salidas(d, hoyEj.slice(0, 7)).secciones.flatMap(s => s.filas).flat().join()).toContain('CR-002-1118');
+  });
+  it('partos no incluye a la vaca que repitió celo ni a los machos', () => {
+    const filas = partos(db).secciones.flatMap(s => s.filas).flat().join();
+    expect(filas).toContain('CR-001-4521');
+    expect(filas).not.toContain('CR-001-4547');
+  });
+  it('la ficha muestra el celo como repetición', () => {
+    const filas = ficha(db.animales['CR-001-4547']).secciones.flatMap(s => s.filas).flat().join();
+    expect(filas).toContain('repetición');
   });
 });

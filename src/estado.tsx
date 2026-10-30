@@ -1,6 +1,6 @@
 // Estado compartido de la app y navegación entre pantallas. Todo componente lee y cambia `est` y luego llama render().
 import { h } from './jsx';
-import { Animal, cargar, guardar, hoy } from './datos';
+import { Animal, cargar, datosDeEjemplo, guardar, hoy } from './datos';
 import { TipoReporte } from './reportes';
 import { detenerCamara } from './qr';
 
@@ -8,6 +8,7 @@ export type Vista = 'lista' | 'reportes' | 'reporte' | 'animal' | 'qr' | 'escane
 
 export const est = {
   db: cargar(),
+  ejemplo: false, // viendo el hato inventado: nada se guarda y lo real sigue intacto
   vista: 'lista' as Vista,
   anterior: 'lista' as Vista,
   actual: null as Animal | null,
@@ -22,6 +23,8 @@ export const est = {
   cambiosDias: 0, // 0 = hoy, 1 = desde ayer, 6 = últimos 7 días
 };
 
+export function verEjemplo(si: boolean) { est.ejemplo = si; est.db = si ? datosDeEjemplo() : cargar(); volver() }
+
 // main.tsx registra cómo se pinta la app (así las pantallas no se importan entre sí en círculo).
 let pintor = () => {};
 export const alPintar = (f: () => void) => { pintor = f };
@@ -29,6 +32,7 @@ export const render = () => pintor();
 
 export function ir(v: Vista) {
   detenerCamara(); if (v !== est.vista) est.anterior = est.vista; est.vista = v; render(); scrollTo(0, 0);
+  document.querySelector<HTMLElement>('main')?.focus({ preventScroll: true }); // quien usa lector de pantalla empieza en la pantalla nueva
   // Fuera de la lista se deja un paso en el historial: así el botón "atrás" del teléfono vuelve en vez de cerrar la app.
   if (v !== 'lista' && !history.state?.app) history.pushState({ app: 1 }, '');
 }
@@ -66,7 +70,7 @@ export async function compartir(file: File, titulo: string): Promise<'compartido
 
 // Guarda y lo dice en pantalla (las ventanitas del navegador pueden estar bloqueadas). Sin texto, solo avisa si falló.
 export function guardarYAvisar(texto = '') {
-  if (guardar(est.db)) { if (texto) avisar(texto); return true }
+  if (est.ejemplo || guardar(est.db)) { if (texto) avisar(texto); return true }
   document.querySelector('.aviso-mal')?.remove();
   const el = <div class="aviso-ok aviso-mal" role="alert" onClick={() => el.remove()}>⚠️ No se pudo guardar. Si cierra la app se perderá lo último. Envíe una copia de seguridad ahora. (Toque para cerrar)</div> as HTMLElement;
   document.body.appendChild(el);

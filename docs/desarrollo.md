@@ -1,6 +1,6 @@
 # Manual para desarrolladores
 
-Guía para entender, cambiar y publicar **Registro de Ganado**. Para usar la app, ver [manual-usuario.html](manual-usuario.html).
+Guía para entender, cambiar y publicar **Registro de Ganado**. Para usar la app, ver [manual-usuario.html](../public/manual-usuario.html).
 
 ## En una frase
 
@@ -27,6 +27,7 @@ index.html            Metadatos (SEO, tarjeta para redes, íconos) y texto para 
 vite.config.ts        base './', TSX con h/Fragment, CSP (solo en build), ruta /storybook (solo en dev)
 storybook.html        Página del catálogo de componentes (no entra al build)
 public/
+  manual-usuario.html Manual de uso (se publica; fuente del PDF); capturas/ son sus imágenes
   sw.js               Service worker: copia local primero, actualización por detrás
   manifest.json       Instalación en pantalla de inicio (íconos PNG normales y "maskable")
   icon*.png/.svg      Íconos (dibujo propio, sin emojis de terceros)
@@ -47,7 +48,6 @@ src/
   *.test.ts           Pruebas de datos.ts, reportes.ts y qr.tsx
 docs/
   auditoria.md        Fallos y vulnerabilidades encontrados y su estado
-  manual-usuario.html Manual de uso (fuente del PDF)
   desarrollo.md       Este documento
 ```
 

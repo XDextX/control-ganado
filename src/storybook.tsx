@@ -62,7 +62,7 @@ const HISTORIAS: Historia[] = [
   { grupo: 'Piezas', nombre: 'Código QR', ver: () => { preparar(); return <ImagenQr texto="999000000049" /> } },
   { grupo: 'Pantallas', nombre: 'Lista vacía (primera vez)', ver: () => { preparar({ db: { animales: {} } }); return <Lista /> } },
   { grupo: 'Pantallas', nombre: 'Lista con animales', ver: () => { preparar(); return <Lista /> } },
-  { grupo: 'Pantallas', nombre: 'Lista buscando “6921”', ver: () => { preparar({ filtro: { q: '6921', finca: '', verRet: false } }); return <Lista /> } },
+  { grupo: 'Pantallas', nombre: 'Lista buscando “4521”', ver: () => { preparar({ filtro: { q: '4521', finca: '', verRet: false } }); return <Lista /> } },
   { grupo: 'Pantallas', nombre: 'Ficha de una vaca preñada', ver: () => { preparar(); est.actual = animal('999000000049'); return <Ficha /> } },
   { grupo: 'Pantallas', nombre: 'Ficha recién parida (agregar cría)', ver: () => { preparar({ criaDe: '999000000049' }); est.actual = animal('999000000049'); return <Ficha /> } },
   { grupo: 'Pantallas', nombre: 'Ficha de un animal vendido', ver: () => { preparar(); est.actual = animal('999000000007'); return <Ficha /> } },

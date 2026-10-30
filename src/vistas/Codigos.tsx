@@ -1,7 +1,7 @@
 // Pantallas de códigos QR: mostrar el de un animal o del corral, pasar lo anotado y escanear.
 import { h, Fragment } from '../jsx';
 import { areteValido, cambiosDesde, cuantos, fusionar, hoy, sumarDias } from '../datos';
-import { abrir, avisar, est, guardarYAvisar, ir, render, volver } from '../estado';
+import { abrir, avisar, est, guardarYAvisar, ir, render, verEjemplo, volver } from '../estado';
 import { Escaner, ImagenQr, interpretar, qrDeAnimal, qrDeDatos } from '../qr';
 
 export function VerQr() {
@@ -25,6 +25,7 @@ function leerQr(texto: string) {
   let l;
   try { l = interpretar(texto) } catch { alert('El código QR no se pudo leer. Intente de nuevo.'); return ir('escaner') }
   if (l.tipo === 'animal') {
+    if (est.ejemplo) verEjemplo(false); // lo recibido es real: no se junta con el ejemplo, que no se guarda
     try {
       const n = fusionar(est.db, l.datos);
       if (!guardarYAvisar()) return ir('lista');

@@ -28,6 +28,7 @@ self.addEventListener('activate', e => e.waitUntil((async () => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  if (new URL(req.url).pathname.endsWith('/manual-usuario.html')) return; // página aparte: no es la app
   if (req.mode === 'navigate') {
     // Abrir la app: la copia guardada al instante; la versión nueva se busca por detrás (si no hay señal, no pasa nada).
     e.waitUntil(actualizar().catch(() => {}));

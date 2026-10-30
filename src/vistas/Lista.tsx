@@ -1,6 +1,6 @@
 import { h, Fragment } from '../jsx';
 import { Animal, alertas, cuantos, diasHasta, edad, estaSeca, fincas, haceCuanto, kilos, porArete, prenezAbierta, retiro, textoEvento, totalPesaje, ultimoEvento, ultimoPesaje } from '../datos';
-import { abrir, est, ir, render } from '../estado';
+import { abrir, est, ir, render, verEjemplo } from '../estado';
 import { AvisoRespaldo, CopiaSeguridad } from '../componentes/CopiaSeguridad';
 import { EliminarDatos } from '../componentes/EliminarDatos';
 import { Comentarios } from '../componentes/Comentarios';
@@ -108,12 +108,13 @@ export function Lista() {
         <h2>👋 Hola</h2>
         <p>Para empezar, toque <b>“➕ Agregar un animal”</b>.</p>
         <p>Si ya tiene una copia de sus datos, toque <b>“📂 Recuperar una copia”</b>, al final de esta pantalla.</p>
+        <button class="grande" onClick={() => verEjemplo(true)}>👀 Ver un ejemplo con animales inventados</button>
       </div>}
       <button class="pri grande" onClick={() => ir('escaner')}>📷 Escanear código QR</button>
       <button class="pri grande" onClick={() => abrir(null)}>➕ Agregar un animal</button>
       {hay && <>
         <label for="buscar">🔍 Buscar animal (últimos números del arete o nombre)</label>
-        <input id="buscar" type="search" placeholder="Ej.: 6921 o Lucera" value={filtro.q}
+        <input id="buscar" type="search" placeholder="Ej.: 4521 o Lucera" value={filtro.q}
           onInput={(e: Event) => { filtro.q = (e.target as HTMLInputElement).value; resultados.replaceChildren(<Resultados />) }} />
         <div ref={(el: HTMLElement) => (resultados = el)}><Resultados /></div>
       </>}
