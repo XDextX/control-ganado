@@ -63,10 +63,14 @@ export function VerReporte() {
         {r.secciones.map(s => <>
           {s.titulo && <h3>{s.titulo}</h3>}
           {s.nota && <p>{s.nota}</p>}
-          {s.filas.length > 0 && <table>
-            {s.cols.length > 0 && <tr>{s.cols.map(c => <th>{c}</th>)}</tr>}
-            {s.filas.map(f => <tr>{f.map((c, i) => <td>{!s.cols.length && i === 0 ? <b>{c}</b> : c}</td>)}</tr>)}
-          </table>}
+          {/* Solo la tabla se desliza de lado (no el título ni la nota), y si no cabe lo dice */}
+          {s.filas.length > 0 && <div class={'desliza' + (s.cols.length >= 5 ? ' ancha' : '')}>
+            <p class="ayuda noprint aviso-desliza">Deslice la tabla con el dedo para ver todas las columnas →</p>
+            <table>
+              {s.cols.length > 0 && <tr>{s.cols.map(c => <th>{c}</th>)}</tr>}
+              {s.filas.map(f => <tr>{f.map((c, i) => <td>{!s.cols.length && i === 0 ? <b>{c}</b> : c}</td>)}</tr>)}
+            </table>
+          </div>}
         </>)}
       </div>
       <div class="noprint">

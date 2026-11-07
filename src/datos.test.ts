@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ficha, inventario, partos, pesajes, salidas, traslados } from './reportes';
-import { Animal, Db, KEY, alertas, juntar, cargar, datosDeEjemplo, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
+import { Animal, Db, KEY, alertas, concentrado, juntar, cargar, datosDeEjemplo, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
@@ -153,13 +153,13 @@ describe('reporte de pesajes', () => {
     guardarPesajes(db, '2026-10-27', [{ arete: 'A', am: 11, pm: 9 }, { arete: 'B', am: 6, pm: 4 }]);
     const r = pesajes(db, '2026-10-27');
     expect(r.sub).toBe('2 vacas pesadas');
-    expect(r.secciones[0].titulo).toBe('P — 30 kg');
-    expect(r.secciones[0].nota).toContain('Concentrado del día: 10 kg');
+    expect(r.secciones[0].titulo).toBe('P — 30 kg');
+    expect(r.secciones[0].nota).toContain('Concentrado del día: 10 kg');
     expect(r.secciones[0].nota).not.toContain('un solo ordeño');
     guardarPesajes(db, '2026-10-28', [{ arete: 'A', am: 12 }]);
     expect(pesajes(db, '2026-10-28').secciones[0].nota).toContain('Donde se pesó un solo ordeño');
-    expect(pesajes(db, '2026-10-28').secciones[0].filas[0].slice(2, 6)).toEqual(['12 kg', '—', '12 kg', '4 kg']);
-    expect(r.secciones[0].filas[0]).toEqual(['A', '', '11 kg', '9 kg', '20 kg', '6,7 kg', '▲ 2 kg']);
+    expect(pesajes(db, '2026-10-28').secciones[0].filas[0].slice(2, 6)).toEqual(['12 kg', '—', '12 kg', '4 kg']);
+    expect(r.secciones[0].filas[0]).toEqual(['A', '', '11 kg', '9 kg', '20 kg', '6,7 kg', '▲\u00a02 kg']);
     expect(r.secciones[0].filas[1][6]).toBe('—');
   });
 });
@@ -304,5 +304,30 @@ describe('aretes en los reportes', () => {
     expect(filas).toContain('188000000001|');
     expect(filas).toContain('188999990001|');
     expect(filas).toContain('sin arete|Mora');
+  });
+});
+
+describe('concentrado sugerido', () => {
+  it('redondea por vaca y el total del día es la suma de lo que se reparte', () => {
+    expect(concentrado(10.5)).toBe(3.5);
+    expect(concentrado(11)).toBe(3.7);
+    const db: Db = { animales: {
+      A: { ...vaca('leche', []), arete: 'A', finca: 'P' },
+      B: { ...vaca('leche', []), arete: 'B', finca: 'P' },
+    } };
+    guardarPesajes(db, '2026-10-27', [{ arete: 'A', am: 7, pm: 3.5 }, { arete: 'B', am: 6.5, pm: 4.5 }]); // 3,5 + 3,7 = 7,2 (y no 21,5 ÷ 3 = 7,17)
+    expect(pesajes(db, '2026-10-27').secciones[0].nota).toContain('Concentrado del día: 7,2 kg');
+  });
+  it('el total del día suma lo de cada vaca (no total de leche ÷ 3)', () => {
+    const db: Db = { animales: Object.fromEntries(['A', 'B', 'C'].map(k => [k, { ...vaca('leche', []), arete: k, finca: 'P' }])) };
+    guardarPesajes(db, '2026-10-27', ['A', 'B', 'C'].map(arete => ({ arete, am: 1 }))); // 0,3 × 3 = 0,9; 3 ÷ 3 daría 1
+    expect(pesajes(db, '2026-10-27').secciones[0].nota).toContain('Concentrado del día: 0,9 kg');
+  });
+  it('una vaca con solo el ordeño de la tarde: «—» en la mañana y aviso de un solo ordeño', () => {
+    const db: Db = { animales: { A: { ...vaca('leche', []), arete: 'A', finca: 'P' } } };
+    guardarPesajes(db, '2026-09-11', [{ arete: 'A', pm: 6 }]);
+    const r = pesajes(db, '2026-09-11').secciones[0];
+    expect(r.filas[0].slice(2, 6)).toEqual(['—', '6 kg', '6 kg', '2 kg']);
+    expect(r.nota).toContain('un solo ordeño');
   });
 });

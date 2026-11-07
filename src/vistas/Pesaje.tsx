@@ -1,8 +1,9 @@
 // Planilla del día de pesaje: todas las vacas de leche de una finca, con mañana y tarde en kilos.
 import { h, Fragment } from '../jsx';
-import { Evento, LECHE_POR_KG_CONCENTRADO, MAX_KILOS, concentrado, cuantos, esRaro, fincas, fmt, guardarPesajes, hoy, kilos, leerKilos, pesajeAnterior, pesajeDe, totalPesaje, vacasDeLeche } from '../datos';
+import { Evento, MAX_KILOS, REGLA_CONCENTRADO, concentrado, cuantos, esRaro, fincas, fmt, guardarPesajes, hoy, kilos, leerKilos, pesajeAnterior, pesajeDe, totalPesaje, vacasDeLeche } from '../datos';
 import { est, guardarYAvisar, mostrarReporte, render, volver } from '../estado';
 import { NombreYArete } from '../componentes/Arete';
+import { Ordenos } from '../componentes/Ordenos';
 
 const borradores = new Map<string, string>(); // lo escrito y sin guardar, por día, vaca y ordeño: sobrevive a cambiar de finca, de fecha o de pantalla
 const clave = (dia: string, arete: string, ordeno: string) => `${dia}|${arete}|${ordeno}`;
@@ -29,10 +30,12 @@ export function Pesaje() {
         i.classList.toggle('raro', raro); raros += +raro;
       }
       const t = (Number.isNaN(am) ? 0 : am ?? 0) + (Number.isNaN(pm) ? 0 : pm ?? 0);
-      f.total.textContent = am === undefined && pm === undefined ? '' : `= ${kilos(t)} · 🌾 ${kilos(concentrado(t))} de concentrado${am === undefined || pm === undefined ? ' (solo con un ordeño)' : ''}`;
+      // Un número en rojo no cuenta como ordeño pesado: el aviso sale si solo uno de los dos es válido.
+      const validos = [am, pm].filter(n => n !== undefined && !Number.isNaN(n)).length;
+      f.total.textContent = am === undefined && pm === undefined ? '' : `= ${kilos(t)} · 🌾 ${kilos(concentrado(t))} de concentrado${validos === 1 ? ' (solo con un ordeño)' : ''}`;
       if (t) { suma += t; conc += concentrado(t); pesadas++ }
     }
-    resumen.textContent = (pesadas ? `${cuantos(pesadas, 'vaca pesada', 'vacas pesadas')} · total ${kilos(suma)} · 🌾 concentrado ${kilos(conc)}` : 'Todavía no hay pesos anotados.')
+    resumen.textContent = (pesadas ? `${cuantos(pesadas, 'vaca pesada', 'vacas pesadas')} · total ${kilos(suma)} · 🌾 concentrado ${kilos(conc)}` : 'Todavía no hay pesos anotados.')
       + (raros ? ` · ⚠️ ${cuantos(raros, 'número muy distinto', 'números muy distintos')} a la vez pasada (en amarillo): revíselos` : '');
   };
   // La tecla "Siguiente" del teclado pasa al próximo cuadro (mañana → tarde → siguiente vaca).
@@ -66,7 +69,7 @@ export function Pesaje() {
         </select>
         <label for="p-fecha">Fecha del pesaje</label>
         <input id="p-fecha" type="date" value={fecha} onChange={(e: Event) => { pl.fecha = (e.target as HTMLInputElement).value || hoy(); render() }} />
-        <p class="ayuda">Anote los kilos de cada ordeño. Deje en blanco la vaca que no se pesó. Al lado sale el concentrado que le toca: 1 kg por cada {LECHE_POR_KG_CONCENTRADO} kg de leche. Si ya había pesaje ese día, aquí aparece para corregirlo.</p>
+        <p class="ayuda">Anote los kilos de cada ordeño. Deje en blanco la vaca que no se pesó. Al lado sale el concentrado que le toca: {REGLA_CONCENTRADO}. Si ya había pesaje ese día, aquí aparece para corregirlo.</p>
         {vacas.map(({ a, seca }) => {
           const p = pesajeDe(a, fecha), antes = pesajeAnterior(a, fecha);
           const coma = (n?: number) => String(n ?? '').replace('.', ',');
@@ -75,7 +78,7 @@ export function Pesaje() {
           const fila = (
             <div class={'card pesaje' + (seca ? ' seca' : '')}>
               <div><NombreYArete nombre={a.nombre} arete={a.arete} />{seca && <span class="tag">Seca</span>} <b class="total" ref={(el: HTMLElement) => (total = el)}></b></div>
-              <p class="ayuda">{antes ? `La vez pasada (${fmt(antes.fecha)}): ${kilos(totalPesaje(antes))} — ☀️ ${kilos(antes.am ?? 0)} · 🌙 ${kilos(antes.pm ?? 0)}` : 'Primer pesaje de esta vaca.'}</p>
+              <p class="ayuda">{antes ? <>La vez pasada (<span class="nw">{fmt(antes.fecha)}</span>): <span class="nw">{kilos(totalPesaje(antes))}</span> — <Ordenos e={antes} /></> : 'Primer pesaje de esta vaca.'}</p>
               <div class="fila">
                 <label>☀️ Mañana (kg)<input inputmode="decimal" enterkeyhint="next" value={borradores.get(clave(fecha, a.arete, 'am')) ?? coma(p?.am)} ref={(el: HTMLInputElement) => (am = el)} onInput={escribir('am')} onKeyDown={siguiente} /></label>
                 <label>🌙 Tarde (kg)<input inputmode="decimal" enterkeyhint="next" value={borradores.get(clave(fecha, a.arete, 'pm')) ?? coma(p?.pm)} ref={(el: HTMLInputElement) => (pm = el)} onInput={escribir('pm')} onKeyDown={siguiente} /></label>

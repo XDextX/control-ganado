@@ -3,6 +3,7 @@ import { Animal, CAMPOS, CATEGORIAS, areteValido, esRepeticion, juntar, nombreA,
 import { abrir, est, guardarYAvisar, ir, mostrarReporte, render, volver } from '../estado';
 import { EliminarAnimal } from '../componentes/EliminarDatos';
 import { NombreYArete } from '../componentes/Arete';
+import { Ordenos } from '../componentes/Ordenos';
 
 function Formulario({ a }: { a: Animal | null }) {
   let pregunta!: HTMLElement;
@@ -155,8 +156,8 @@ function Pesajes({ a }: { a: Animal }) {
           const ant = todos[todos.indexOf(e) - 1], dif = ant ? totalPesaje(e) - totalPesaje(ant) : 0;
           return (
             <li class="ev">
-              <span><b>{kilos(totalPesaje(e))}</b> {dif > 0 ? <span class="ok">▲ {kilos(dif)}</span> : dif < 0 ? <span class="bad">▼ {kilos(-dif)}</span> : null}<br />
-                <span class="mut">{fmt(e.fecha)} · ☀️ {kilos(e.am ?? 0)} · 🌙 {kilos(e.pm ?? 0)}</span></span>
+              <span><b class="nw">{kilos(totalPesaje(e))}</b> {dif > 0 ? <span class="ok nw">▲ {kilos(dif)}</span> : dif < 0 ? <span class="bad nw">▼ {kilos(-dif)}</span> : null}<br />
+                <span class="mut"><span class="nw">{fmt(e.fecha)}</span> · <Ordenos e={e} /></span></span>
               <button class="borrar" onClick={(ev: Event) => borrarEvento(a, e.id, ev.currentTarget as HTMLButtonElement)}>Borrar</button>
             </li>
           );

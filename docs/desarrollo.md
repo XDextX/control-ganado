@@ -103,6 +103,8 @@ Otras claves: `ganado.v1.respaldo` (fecha de la última copia enviada o guardada
 - **Secado:** parto probable − `SECADO_ANTES` (60 días), solo en vacas de leche. **Seca:** último secado posterior al último parto (`estaSeca`).
 - **Avisos:** partos y secados a 30 días o menos (`alertas`).
 - **Pesaje:** un evento por vaca y día (`guardarPesajes` reemplaza). `leerKilos` acepta coma, rechaza más de `MAX_KILOS` (60) por ordeño. `esRaro`: más del doble o menos de la mitad que la vez anterior.
+- **Concentrado:** `concentrado(kg)` = kg de leche del día ÷ `LECHE_POR_KG_CONCENTRADO` (3), redondeado a 0,1; el total del día es la suma por vaca. Un pesaje con un solo ordeño se avisa ("solo con un ordeño") porque el concentrado sale solo sobre ese ordeño. El ordeño sin pesar se muestra «—» con `componentes/Ordenos.tsx`.
+- **Kilos en pantalla:** `kilos()` usa un espacio que no se parte (`\u00a0`) entre el número y "kg", y la clase `.nw` une ícono y valor: nunca salen cortados. En la foto de un reporte con muchas columnas la letra se achica (30 → 27 → 24 px) para no partir palabras; en pantalla, solo la tabla se desliza de lado (`.desliza`), con una pista en el celular.
 - **Fechas:** siempre texto `AAAA-MM-DD` en hora **local** (`hoy()`, `fechaLocal`). Para sumar días se usa UTC a mediodía (`sumarDias`), así el horario no mueve la fecha.
 
 ## Sincronización entre teléfonos

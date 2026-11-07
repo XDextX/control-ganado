@@ -1,5 +1,5 @@
 // Cada reporte es un objeto simple que se pinta igual en pantalla, en PDF (imprimir) y en imagen (para enviar por mensaje).
-import { Animal, Db, EVENTOS, LECHE_POR_KG_CONCENTRADO, MOTIVOS, concentrado, cuantos, kilos, pesajeDe, totalPesaje, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, textoEvento, prenezAbierta, retiro } from './datos';
+import { Animal, Db, EVENTOS, MOTIVOS, REGLA_CONCENTRADO, concentrado, cuantos, kilos, pesajeDe, totalPesaje, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, textoEvento, prenezAbierta, retiro } from './datos';
 
 export interface Seccion { titulo: string; nota: string; cols: string[]; filas: string[][] }
 export interface Reporte { titulo: string; sub: string; secciones: Seccion[] }
@@ -65,11 +65,11 @@ export function pesajes(db: Db, fecha: string): Reporte {
       const xs = porFinca[f], suma = xs.reduce((n, x) => n + totalPesaje(x.p!), 0), conc = xs.reduce((n, x) => n + concentrado(totalPesaje(x.p!)), 0);
       return {
         titulo: `${f} — ${kilos(suma)}`,
-        nota: `Promedio por vaca: ${kilos(suma / xs.length)} · Concentrado del día: ${kilos(conc)} (1 kg por cada ${LECHE_POR_KG_CONCENTRADO} kg de leche)` + (xs.some(x => x.p!.am === undefined || x.p!.pm === undefined) ? '. Donde se pesó un solo ordeño, el concentrado sale sobre ese ordeño.' : ''),
+        nota: `Promedio por vaca: ${kilos(suma / xs.length)} · Concentrado del día: ${kilos(conc)} (${REGLA_CONCENTRADO})` + (xs.some(x => x.p!.am === undefined || x.p!.pm === undefined) ? '. Donde se pesó un solo ordeño, el concentrado sale sobre ese ordeño.' : ''),
         cols: ['Arete', 'Nombre', 'Mañana', 'Tarde', 'Total', 'Concentrado', 'Cambio'],
         filas: xs.map(({ a, p }) => {
           const ant = anterior(a), dif = ant ? totalPesaje(p!) - totalPesaje(ant) : null;
-          return [...animal(a, db), p!.am === undefined ? '—' : kilos(p!.am), p!.pm === undefined ? '—' : kilos(p!.pm), kilos(totalPesaje(p!)), kilos(concentrado(totalPesaje(p!))), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
+          return [...animal(a, db), p!.am === undefined ? '—' : kilos(p!.am), p!.pm === undefined ? '—' : kilos(p!.pm), kilos(totalPesaje(p!)), kilos(concentrado(totalPesaje(p!))), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
         }),
       };
     }),
@@ -129,13 +129,11 @@ export function reporteAImagen(r: Reporte): HTMLCanvasElement {
     while (t && x.measureText(t + '…').width > max) t = t.slice(0, -1);
     return t + '…';
   };
-  // Palabras que no se separan: un número y su "kg" van siempre juntos ("6,5 kg", no "6,5 / kg").
-  const palabras = (t: string) => t.split(/ (?!kg\b)/);
   // Parte el texto en renglones que quepan en "max", sin cortar datos: una palabra muy larga (un arete) se parte por letras.
   const partir = (t: string, max: number) => {
     const renglones: string[] = [];
     let r = '';
-    for (const palabra of palabras(t)) {
+    for (const palabra of t.split(' ')) {
       const prueba = r ? r + ' ' + palabra : palabra;
       if (x.measureText(prueba).width <= max) { r = prueba; continue }
       if (r) renglones.push(r);
@@ -171,7 +169,7 @@ export function reporteAImagen(r: Reporte): HTMLCanvasElement {
     // Ancho de cada columna con letra de tamaño "tam": el texto entero, o solo su palabra más larga (lo mínimo para no partir palabras).
     const medir = (tam: number, palabra: boolean) => Array.from({ length: n }, (_, i) => Math.max(...filas.flatMap((f, k) => {
       x.font = F(negrita(k, i) ? 700 : 400, tam);
-      return (palabra ? palabras(f[i] ?? '') : [f[i] ?? '']).map(t => x.measureText(t).width);
+      return (palabra ? (f[i] ?? '').split(' ') : [f[i] ?? '']).map(t => x.measureText(t).width);
     })) + 28);
     // Con muchas columnas, la letra de la tabla se achica un poco (hasta 24 px) para que ninguna palabra se parta.
     const T = [30, 27, 24].find(t => medir(t, true).reduce((a, b) => a + b, 0) <= ancho) ?? 24, esc = T / 30;
