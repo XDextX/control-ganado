@@ -68,7 +68,8 @@ export function MiVista() {
 - Para no perder el foco al escribir (por ejemplo, el buscador), la vista repinta **solo un trozo**: guarda un contenedor con `ref` y llama `cont.replaceChildren(<Parte />)`.
 - `ref={(el) => …}` recibe el elemento real. `value` y `checked` se asignan como propiedad; lo demás, como atributo.
 - Estado que no debe perderse entre repintados va en `est` (`estado.tsx`) o en una variable del módulo de la vista (como `origen` en `Mover.tsx`).
-- `avisar('✅ …')` muestra el mensaje grande verde.
+- `avisar('✅ …', ms)` muestra la franja verde: dura 2,2 s, o `ms` para un mensaje largo; una nueva reemplaza a la anterior y se puede cerrar con «✕ Cerrar».
+- `avisarError(texto)` muestra una franja roja que se cierra con «✕ Cerrar» (también con el teclado). **Ningún aviso flota**: todos van en `#avisos`, al principio de la página, y empujan el contenido en vez de tapar botones o campos. El de "no se pudo guardar" (`guardado: true`) va siempre primero, no se lleva el foco (no hace saltar la página) y solo se quita al tocarlo o cuando un guardado sale bien; puede convivir con otro rojo. `quitarError('otros' | 'guardado' | 'todos')` elige cuál quitar, y si el aviso tenía el foco, lo pasa a la pantalla. Un error de un campo va debajo del campo con `aria-describedby` (ver «Pegue aquí una copia» y la finca del Excel de SENASA).
 
 **Seguridad de la interfaz:** `h()` agrega el texto con `createTextNode`, así que un nombre o nota con `<script>` se ve como texto. No use `innerHTML`.
 
@@ -105,12 +106,12 @@ Otras claves: `ganado.v1.respaldo` (fecha de la última copia enviada o guardada
 - **Avisos:** partos y secados a 30 días o menos (`alertas`).
 - **Pesaje:** un evento por vaca y día (`guardarPesajes` reemplaza). `leerKilos` acepta coma, rechaza más de `MAX_KILOS` (60) por ordeño. `esRaro`: más del doble o menos de la mitad que la vez anterior.
 - **Concentrado:** `concentrado(kg)` = kg de leche del día ÷ `LECHE_POR_KG_CONCENTRADO` (3), redondeado a 0,1; el total del día es la suma por vaca. Un pesaje con un solo ordeño se avisa ("solo con un ordeño") porque el concentrado sale solo sobre ese ordeño. El ordeño sin pesar se muestra «—» con `componentes/Ordenos.tsx`.
-- **Kilos en pantalla:** `kilos()` usa un espacio que no se parte (`\u00a0`) entre el número y "kg", y la clase `.nw` une ícono y valor: nunca salen cortados. En la foto de un reporte con muchas columnas la letra se achica (30 → 27 → 24 px) para no partir palabras; en pantalla, solo la tabla se desliza de lado (`.desliza`), con una pista en el celular.
+- **Kilos en pantalla:** `kilos()` usa un espacio que no se parte (`\u00a0`) entre el número y "kg", y la clase `.nw` une ícono y valor: nunca salen cortados. En la foto de un reporte, la letra de las tablas se achica (30 → 27 → 24 px) para no partir palabras, y es una sola para toda la imagen: la que necesita la tabla más ancha; en pantalla, solo la tabla se desliza de lado (`.desliza`), con una pista en el celular.
 - **Fechas:** siempre texto `AAAA-MM-DD` en hora **local** (`hoy()`, `fechaLocal`). Para sumar días se usa UTC a mediodía (`sumarDias`), así el horario no mueve la fecha.
 
 ## Excel de SENASA (`senasa.ts`)
 
-"Recuperar una copia" también acepta el `.xlsx` de SENASA con los rangos de aretes por finca. Se lee en el teléfono sin librerías: `leerXlsx` abre el `.zip` con `DecompressionStream` y saca las celdas del XML; `rangosDeSenasa` busca las columnas por su encabezado ("Rango Inicial", "Rango Final"…). La pantalla `vistas/Senasa.tsx` deja elegir finca y tipo (leche/carne) por cada finca del Excel; `agregarSenasa` crea solo los aretes que faltan de los rangos seguidos (hasta `MAX_POR_ENTREGA`), llena la finca vacía de los que ya existen y avisa los rangos con huecos. No se guardan nombres de fincas en el código: el repositorio es público.
+"Recuperar una copia" también acepta el `.xlsx` de SENASA con los rangos de aretes por finca. Se lee en el teléfono sin librerías: `leerXlsx` abre el `.zip` con `DecompressionStream` y saca las celdas del XML; `rangosDeSenasa` busca las columnas por su encabezado ("Rango Inicial", "Rango Final"…). La pantalla `vistas/Senasa.tsx` deja elegir finca y tipo (leche/carne) por cada finca del Excel; `agregarSenasa` crea solo los aretes que faltan de los rangos seguidos (hasta `MAX_POR_ENTREGA`), llena la finca vacía de los que ya existen y avisa los rangos con huecos. No se guardan nombres de fincas en el código: el repositorio es público. El largo normal de un arete sale de los aretes de 10 dígitos o más que ya están en la app (los números propios cortos no cuentan) o, si no hay, del Excel; un arete más corto o más largo se avisa y no se agrega.
 
 ## Sincronización entre teléfonos
 
@@ -151,6 +152,7 @@ Es un requisito, no un adorno:
 - Botones grandes (mínimo 56 px de alto), letra base 19 px (23 px con "letra más grande"), contraste alto en claro y oscuro.
 - Texto simple, sin códigos ni palabras técnicas; los números de arete con los últimos 4 dígitos en grande.
 - Confirmar con mensajes claros (`avisar`) y nunca depender solo del color.
+- Lo que se toca también se usa con teclado: las tarjetas de la lista tienen `role="button"` y `tabindex="0"` y se abren con Enter o espacio; los avisos de la lista son un `<button>` dentro de cada `<li>`, para que el lector siga anunciando la lista. Tras agregar el Excel de SENASA, el foco va al título del resumen.
 - Cada cambio de interfaz conviene revisarlo con el "ejercicio de usuario": recorrer la app como una persona de 60+ con poca vista.
 
 ## Agregar algo

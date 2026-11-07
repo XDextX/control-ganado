@@ -149,7 +149,8 @@ const masComun = (largos: number[]) => {
   return [...cuenta].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] ?? 0;
 };
 function largoNormal(db: Db, rangos: Rango[]) {
-  return masComun(Object.keys(db.animales).filter(k => /^\d{5,}$/.test(k)).map(k => k.length)) || masComun(rangos.map(r => r.inicio.length));
+  // Solo cuentan los aretes de 10 dígitos o más: los números propios cortos (de la finca) no son aretes oficiales.
+  return masComun(Object.keys(db.animales).filter(k => /^\d{10,}$/.test(k)).map(k => k.length)) || masComun(rangos.map(r => r.inicio.length));
 }
 export function motivo(r: Rango, largo: number): Motivo | null {
   if (r.inicio.length < largo) return 'sin-cero';
@@ -170,16 +171,18 @@ export function planSenasa(db: Db, rangos: Rango[]) {
   const largo = largoNormal(db, rangos), omitidas: (Omitida & { rango: Rango })[] = [];
   let aretes: ReturnType<typeof numericos> | undefined;
   let nuevos = 0, sinFinca = 0;
+  const porFinca: Record<string, number> = {}; // por finca del Excel: cuántos aretes nuevos o sin finca hay que tocar
   for (const r of rangos) {
     const m = motivo(r, largo);
     if (m) { omitidas.push({ rango: r, finca: r.finca, total: r.total, yaEstan: enRango(aretes ??= numericos(db), r), motivo: m, digitos: r.inicio.length, normal: largo }); continue }
     for (const arete of aretesDe(r)) {
       const a = Object.hasOwn(db.animales, arete) ? db.animales[arete] : undefined;
-      if (!a) nuevos++; else if (!a.finca) sinFinca++;
+      if (!a) nuevos++; else if (!a.finca) sinFinca++; else continue;
+      porFinca[r.finca] = (porFinca[r.finca] ?? 0) + 1;
     }
     if (nuevos > MAX_NUEVOS) break;
   }
-  return { nuevos, sinFinca, omitidas, largo };
+  return { nuevos, sinFinca, omitidas, largo, porFinca };
 }
 
 export interface Resultado { nuevos: number; fincasLlenadas: number; omitidas: Omitida[] }

@@ -6,6 +6,13 @@ import { EliminarDatos } from '../componentes/EliminarDatos';
 import { Comentarios } from '../componentes/Comentarios';
 import { NombreYArete } from '../componentes/Arete';
 
+// Una tarjeta que abre el animal con un toque, o con el teclado (Tab para llegar, Enter o espacio para abrir).
+const abrible = (a: Animal) => ({
+  role: 'button', tabindex: '0', // sin aria-label: el lector lee la tarjeta entera (nombre, arete y su estado)
+  onClick: () => abrir(a.arete),
+  onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(a.arete) } },
+});
+
 // Texto corto de un aviso: "parto en 4 días", "secado atrasado 56 días".
 const textoAviso = (que: string, d: number) => que === 'Secar'
   ? (d < 0 ? `secado atrasado ${cuantos(-d, 'día', 'días')}` : d === 0 ? 'secar hoy' : `secar en ${cuantos(d, 'día', 'días')}`)
@@ -22,10 +29,13 @@ function Alertas() {
       <p class="ayuda">Toque un animal para anotar lo que pasó.</p>
       <ul>
         {[...porAnimal.values()].map(xs => (
-          <li class="ev item" onClick={() => abrir(xs[0].a.arete)}>
-            <span><NombreYArete nombre={xs[0].a.nombre} arete={xs[0].a.arete} /><br />
-              {xs.map((x, i) => { const d = diasHasta(x.f); return <>{i ? ' · ' : ''}<span class={d < 0 ? 'bad' : 'warn'}>{textoAviso(x.que, d)}</span></> })}
-            </span>
+          // Un botón dentro de cada elemento (y no el elemento como botón): el lector sigue diciendo «lista de N elementos».
+          <li class="ev">
+            <button type="button" class="item" onClick={() => abrir(xs[0].a.arete)}>
+              <span><NombreYArete nombre={xs[0].a.nombre} arete={xs[0].a.arete} /><br />
+                {xs.map((x, i) => { const d = diasHasta(x.f); return <>{i ? ' · ' : ''}<span class={d < 0 ? 'bad' : 'warn'}>{textoAviso(x.que, d)}</span></> })}
+              </span>
+            </button>
           </li>
         ))}
       </ul>
@@ -53,7 +63,7 @@ function Paginas({ total, cambiar }: { total: number; cambiar: () => void }) {
 function Tarjeta({ a }: { a: Animal }) {
   const r = retiro(a), p = prenezAbierta(a), ult = ultimoEvento(a), pes = ultimoPesaje(a);
   return (
-    <div class="card tarjeta" onClick={() => abrir(a.arete)}>
+    <div class="card tarjeta" {...abrible(a)}>
       <div class="tarjeta-cabeza">
         <NombreYArete nombre={a.nombre} arete={a.arete} />
         <span class="tags">
