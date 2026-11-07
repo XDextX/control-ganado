@@ -29,7 +29,7 @@ export function Pesaje() {
         i.classList.toggle('raro', raro); raros += +raro;
       }
       const t = (Number.isNaN(am) ? 0 : am ?? 0) + (Number.isNaN(pm) ? 0 : pm ?? 0);
-      f.total.textContent = am === undefined && pm === undefined ? '' : `= ${kilos(t)} · 🌾 ${kilos(concentrado(t))} de concentrado`;
+      f.total.textContent = am === undefined && pm === undefined ? '' : `= ${kilos(t)} · 🌾 ${kilos(concentrado(t))} de concentrado${am === undefined || pm === undefined ? ' (solo con un ordeño)' : ''}`;
       if (t) { suma += t; conc += concentrado(t); pesadas++ }
     }
     resumen.textContent = (pesadas ? `${cuantos(pesadas, 'vaca pesada', 'vacas pesadas')} · total ${kilos(suma)} · 🌾 concentrado ${kilos(conc)}` : 'Todavía no hay pesos anotados.')

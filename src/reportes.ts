@@ -69,7 +69,7 @@ export function pesajes(db: Db, fecha: string): Reporte {
         cols: ['Arete', 'Nombre', 'Mañana', 'Tarde', 'Total', 'Concentrado', 'Cambio'],
         filas: xs.map(({ a, p }) => {
           const ant = anterior(a), dif = ant ? totalPesaje(p!) - totalPesaje(ant) : null;
-          return [...animal(a, db), kilos(p!.am ?? 0), kilos(p!.pm ?? 0), kilos(totalPesaje(p!)), kilos(concentrado(totalPesaje(p!))), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
+          return [...animal(a, db), p!.am === undefined ? '—' : kilos(p!.am), p!.pm === undefined ? '—' : kilos(p!.pm), kilos(totalPesaje(p!)), kilos(concentrado(totalPesaje(p!))), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
         }),
       };
     }),
@@ -129,11 +129,13 @@ export function reporteAImagen(r: Reporte): HTMLCanvasElement {
     while (t && x.measureText(t + '…').width > max) t = t.slice(0, -1);
     return t + '…';
   };
+  // Palabras que no se separan: un número y su "kg" van siempre juntos ("6,5 kg", no "6,5 / kg").
+  const palabras = (t: string) => t.split(/ (?!kg\b)/);
   // Parte el texto en renglones que quepan en "max", sin cortar datos: una palabra muy larga (un arete) se parte por letras.
   const partir = (t: string, max: number) => {
     const renglones: string[] = [];
     let r = '';
-    for (const palabra of t.split(' ')) {
+    for (const palabra of palabras(t)) {
       const prueba = r ? r + ' ' + palabra : palabra;
       if (x.measureText(prueba).width <= max) { r = prueba; continue }
       if (r) renglones.push(r);
@@ -164,31 +166,36 @@ export function reporteAImagen(r: Reporte): HTMLCanvasElement {
       y += renglones.length * RENGLON + 12;
     }
     if (!s.filas.length) continue;
-    x.font = F(400, 30);
-    const filas = s.cols.length ? [s.cols, ...s.filas] : s.filas;
-    const n = filas[0].length, anchos = Array.from({ length: n }, (_, i) => Math.max(...filas.map(f => x.measureText(f[i] ?? '').width)) + 28);
-    // Si no caben: cada columna tiene al menos el ancho de su palabra más larga (un arete no se parte),
+    const filas = s.cols.length ? [s.cols, ...s.filas] : s.filas, n = filas[0].length, ancho = W - 2 * P;
+    const negrita = (k: number, i: number) => (s.cols.length > 0 && k === 0) || (!s.cols.length && i === 0);
+    // Ancho de cada columna con letra de tamaño "tam": el texto entero, o solo su palabra más larga (lo mínimo para no partir palabras).
+    const medir = (tam: number, palabra: boolean) => Array.from({ length: n }, (_, i) => Math.max(...filas.flatMap((f, k) => {
+      x.font = F(negrita(k, i) ? 700 : 400, tam);
+      return (palabra ? palabras(f[i] ?? '') : [f[i] ?? '']).map(t => x.measureText(t).width);
+    })) + 28);
+    // Con muchas columnas, la letra de la tabla se achica un poco (hasta 24 px) para que ninguna palabra se parta.
+    const T = [30, 27, 24].find(t => medir(t, true).reduce((a, b) => a + b, 0) <= ancho) ?? 24, esc = T / 30;
+    const anchos = medir(T, false), total = anchos.reduce((a, b) => a + b, 0);
+    // Si no caben enteras: cada columna tiene al menos el ancho de su palabra más larga (un arete no se parte),
     // y lo que sobra se reparte según cuánto le falta a cada una para verse en un solo renglón.
-    const total = anchos.reduce((a, b) => a + b, 0);
-    if (total > W - 2 * P) {
-      const minimos = anchos.map((_, i) => Math.max(...filas.flatMap(f => (f[i] ?? '').split(' ').map(p => x.measureText(p).width))) + 28);
-      const sumaMin = minimos.reduce((a, b) => a + b, 0), extra = Math.max(0, W - 2 * P - sumaMin), pide = total - sumaMin;
-      anchos.forEach((w, i) => { anchos[i] = sumaMin > W - 2 * P ? (W - 2 * P) / n : minimos[i] + extra * (w - minimos[i]) / pide });
+    if (total > ancho) {
+      const minimos = medir(T, true), sumaMin = minimos.reduce((a, b) => a + b, 0), extra = Math.max(0, ancho - sumaMin), pide = total - sumaMin;
+      anchos.forEach((w, i) => { anchos[i] = sumaMin > ancho ? ancho / n : minimos[i] + extra * (w - minimos[i]) / pide });
     }
     for (const [k, f] of filas.entries()) {
       if (y > MAX_ALTO - 150) {
         faltan += filas.length - k + r.secciones.slice(si + 1).reduce((n, x) => n + x.filas.length, 0);
         break secciones;
       }
-      const yy = y, cab = s.cols.length > 0 && k === 0, negrita = (i: number) => cab || (!s.cols.length && i === 0);
-      const celdas = f.map((t, i) => { x.font = F(negrita(i) ? 700 : 400, 30); return partir(t ?? '', anchos[i] - 20) });
-      const alto = LH + (Math.max(...celdas.map(c => c.length)) - 1) * RENGLON;
+      const yy = y;
+      const celdas = f.map((t, i) => { x.font = F(negrita(k, i) ? 700 : 400, T); return partir(t ?? '', anchos[i] - 20) });
+      const alto = (LH + (Math.max(...celdas.map(c => c.length)) - 1) * RENGLON) * esc;
       pasos.push(() => {
-        if (k % 2 === (s.cols.length ? 1 : 0)) { x.fillStyle = '#eef6ef'; x.fillRect(P - 10, yy - 34, W - 2 * P + 20, alto) }
+        if (k % 2 === (s.cols.length ? 1 : 0)) { x.fillStyle = '#eef6ef'; x.fillRect(P - 10, yy - 34 * esc, W - 2 * P + 20, alto) }
         let xx = P;
         celdas.forEach((renglones, i) => {
-          x.fillStyle = '#111'; x.font = F(negrita(i) ? 700 : 400, 30);
-          renglones.forEach((t, j) => x.fillText(t, xx, yy + j * RENGLON));
+          x.fillStyle = '#111'; x.font = F(negrita(k, i) ? 700 : 400, T);
+          renglones.forEach((t, j) => x.fillText(t, xx, yy + j * RENGLON * esc));
           xx += anchos[i];
         });
       });

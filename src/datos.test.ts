@@ -158,6 +158,7 @@ describe('reporte de pesajes', () => {
     expect(r.secciones[0].nota).not.toContain('un solo ordeño');
     guardarPesajes(db, '2026-10-28', [{ arete: 'A', am: 12 }]);
     expect(pesajes(db, '2026-10-28').secciones[0].nota).toContain('Donde se pesó un solo ordeño');
+    expect(pesajes(db, '2026-10-28').secciones[0].filas[0].slice(2, 6)).toEqual(['12 kg', '—', '12 kg', '4 kg']);
     expect(r.secciones[0].filas[0]).toEqual(['A', '', '11 kg', '9 kg', '20 kg', '6,7 kg', '▲ 2 kg']);
     expect(r.secciones[0].filas[1][6]).toBe('—');
   });
