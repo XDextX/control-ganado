@@ -154,8 +154,8 @@ describe('reporte de pesajes', () => {
     const r = pesajes(db, '2026-10-27');
     expect(r.sub).toBe('2 vacas pesadas');
     expect(r.secciones[0].titulo).toBe('P — 30 kg');
-    expect(r.secciones[0].filas[0]).toEqual(['A', '11 kg', '9 kg', '20 kg', '▲ 2 kg']);
-    expect(r.secciones[0].filas[1][4]).toBe('—');
+    expect(r.secciones[0].filas[0]).toEqual(['A', '', '11 kg', '9 kg', '20 kg', '▲ 2 kg']);
+    expect(r.secciones[0].filas[1][5]).toBe('—');
   });
 });
 
@@ -286,7 +286,7 @@ describe('juntar un arete provisional con el registrado', () => {
 });
 
 describe('aretes en los reportes', () => {
-  it('muestran el nombre y los últimos 4 dígitos, o el arete completo si otro termina igual', () => {
+  it('muestran los últimos 4 dígitos y el nombre en columnas aparte, o el arete completo si otro termina igual', () => {
     const monta = [{ id: 'm1', tipo: 'monta' as const, fecha: '2026-06-01', nota: '' }];
     const db: Db = { animales: {
       '188002916933': { ...vaca('leche', monta), arete: '188002916933', nombre: 'La 20' },
@@ -294,10 +294,10 @@ describe('aretes en los reportes', () => {
       '188999990001': { ...vaca('leche', monta), arete: '188999990001' },
       'PEND-Mora': { ...vaca('leche', monta), arete: 'PEND-Mora', nombre: 'Mora' },
     } };
-    const filas = partos(db).secciones.flatMap(s => s.filas).map(f => f[0]);
-    expect(filas).toContain('La 20 · 6933');
-    expect(filas).toContain('188000000001');
-    expect(filas).toContain('188999990001');
-    expect(filas).toContain('Mora · sin arete');
+    const filas = partos(db).secciones.flatMap(s => s.filas).map(f => f.slice(0, 2).join('|'));
+    expect(filas).toContain('6933|La 20');
+    expect(filas).toContain('188000000001|');
+    expect(filas).toContain('188999990001|');
+    expect(filas).toContain('sin arete|Mora');
   });
 });

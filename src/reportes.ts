@@ -5,13 +5,13 @@ export interface Seccion { titulo: string; nota: string; cols: string[]; filas: 
 export interface Reporte { titulo: string; sub: string; secciones: Seccion[] }
 export type TipoReporte = 'inventario' | 'partos' | 'salidas' | 'traslados' | 'pesajes' | 'ficha';
 
-// En los reportes, como en el campo, basta con los últimos 4 dígitos del arete oficial; el nombre va primero, como en la app.
+// En los reportes, como en el campo, basta con los últimos 4 dígitos del arete oficial; el nombre va en su propia columna.
 // Si otro animal termina en los mismos 4 dígitos, se muestra completo para no confundirlos.
-const animalCorto = (a: Animal, db: Db) => {
+const areteCorto = (a: Animal, db: Db) => {
   const fin = a.arete.slice(-4), corto = /^\d{5,}$/.test(a.arete) && !Object.values(db.animales).some(o => o !== a && o.arete.endsWith(fin));
-  const arete = corto ? fin : a.arete.startsWith('PEND-') ? 'sin arete' : a.arete; // PEND-: arete provisional, todavía sin el oficial
-  return a.nombre ? `${a.nombre} · ${arete}` : arete;
+  return corto ? fin : a.arete.startsWith('PEND-') ? 'sin arete' : a.arete; // PEND-: arete provisional, todavía sin el oficial
 };
+const animal = (a: Animal, db: Db) => [areteCorto(a, db), a.nombre];
 const activos = (db: Db) => Object.values(db.animales).filter(a => !retiro(a)).sort(porArete);
 const contar = (lista: Animal[]) => {
   const c: Record<string, number> = {};
@@ -27,7 +27,7 @@ export function inventario(db: Db): Reporte {
     titulo: 'Animales por finca', sub: `${cuantos(total, 'animal activo', 'animales activos')} · ${fmt(hoy())}`,
     secciones: Object.keys(porFinca).sort().map(f => ({
       titulo: `${f} — ${cuantos(porFinca[f].length, 'animal', 'animales')}`, nota: contar(porFinca[f]),
-      cols: ['Animal', 'Categoría', 'Raza', 'Edad'], filas: porFinca[f].map(a => [animalCorto(a, db), a.categoria, a.raza, edad(a.nac)]),
+      cols: ['Arete', 'Nombre', 'Categoría', 'Raza', 'Edad'], filas: porFinca[f].map(a => [...animal(a, db), a.categoria, a.raza, edad(a.nac)]),
     })),
   };
 }
@@ -36,13 +36,13 @@ export function partos(db: Db): Reporte {
   const filas = activos(db).map(a => ({ a, p: prenezAbierta(a) })).filter(x => x.p).sort((x, y) => x.p!.parto.localeCompare(y.p!.parto))
     .map(({ a, p }) => {
       const d = diasHasta(p!.parto);
-      return [animalCorto(a, db), a.finca, fmt(p!.parto), p!.secado ? fmt(p!.secado) : '—', d < 0 ? `Pasó hace ${-d} días` : `Faltan ${d} días`];
+      return [...animal(a, db), a.finca, fmt(p!.parto), p!.secado ? fmt(p!.secado) : '—', d < 0 ? `Pasó hace ${-d} días` : `Faltan ${d} días`];
     });
   return {
     titulo: 'Próximos partos y secados', sub: `${cuantos(filas.length, 'vaca preñada', 'vacas preñadas')} · ${fmt(hoy())}`,
     secciones: [{
       titulo: '', nota: filas.length ? 'Parto = monta + 283 días. Secar 60 días antes (solo leche).' : 'No hay vacas preñadas anotadas.',
-      cols: ['Animal', 'Finca', 'Parto', 'Secar', 'Cuándo'], filas,
+      cols: ['Arete', 'Nombre', 'Finca', 'Parto', 'Secar', 'Cuándo'], filas,
     }],
   };
 }
@@ -65,10 +65,10 @@ export function pesajes(db: Db, fecha: string): Reporte {
       const xs = porFinca[f], suma = xs.reduce((n, x) => n + totalPesaje(x.p!), 0);
       return {
         titulo: `${f} — ${kilos(suma)}`, nota: `Promedio por vaca: ${kilos(suma / xs.length)}`,
-        cols: ['Vaca', 'Mañana', 'Tarde', 'Total', 'Cambio'],
+        cols: ['Arete', 'Nombre', 'Mañana', 'Tarde', 'Total', 'Cambio'],
         filas: xs.map(({ a, p }) => {
           const ant = anterior(a), dif = ant ? totalPesaje(p!) - totalPesaje(ant) : null;
-          return [animalCorto(a, db), kilos(p!.am ?? 0), kilos(p!.pm ?? 0), kilos(totalPesaje(p!)), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
+          return [...animal(a, db), kilos(p!.am ?? 0), kilos(p!.pm ?? 0), kilos(totalPesaje(p!)), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
         }),
       };
     }),
@@ -85,7 +85,7 @@ export function traslados(db: Db, mes: string): Reporte {
     titulo: 'Traslados de ' + nombreDelMes(mes), sub: cuantos(movs.length, 'animal trasladado', 'animales trasladados'),
     secciones: [{
       titulo: '', nota: movs.length ? Object.entries(rutas).map(([r, n]) => `${n} de ${r}`).join(' · ') : 'No se trasladó ningún animal este mes.',
-      cols: ['Fecha', 'Animal', 'De', 'A', 'Nota'], filas: movs.map(({ a, e }) => [fmt(e.fecha), animalCorto(a, db), e.desde || '—', e.hacia ?? '', e.nota]),
+      cols: ['Fecha', 'Arete', 'Nombre', 'De', 'A', 'Nota'], filas: movs.map(({ a, e }) => [fmt(e.fecha), ...animal(a, db), e.desde || '—', e.hacia ?? '', e.nota]),
     }],
   };
 }
@@ -98,7 +98,7 @@ export function salidas(db: Db, mes: string): Reporte {
     titulo: 'Salidas de ' + nombreMes, sub: `${sal.length === 1 ? '1 animal salió' : sal.length + ' animales salieron'}`,
     secciones: [{
       titulo: '', nota: sal.length ? MOTIVOS.map(m => `${sal.filter(x => x.r.motivo === m).length} ${m}`).join(' · ') : 'Ningún animal salió este mes.',
-      cols: ['Fecha', 'Animal', 'Finca', 'Motivo', 'Nota'], filas: sal.map(({ a, r }) => [fmt(r.fecha), animalCorto(a, db), a.finca, r.motivo ?? '', r.nota]),
+      cols: ['Fecha', 'Arete', 'Nombre', 'Finca', 'Motivo', 'Nota'], filas: sal.map(({ a, r }) => [fmt(r.fecha), ...animal(a, db), a.finca, r.motivo ?? '', r.nota]),
     }],
   };
 }
