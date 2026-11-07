@@ -199,4 +199,16 @@ describe('Excel de SENASA: límites y formatos raros', () => {
     expect(planSenasa(db, rangos).omitidas).toHaveLength(1000);
     expect(Date.now() - t0).toBeLessThan(500);
   });
+
+  it('los números propios cortos de la app no cambian el largo normal de los aretes de SENASA', () => {
+    const db: Db = { animales: Object.fromEntries(['1001', '1002', '20030', '55555', '123456'].map(a => [a, { arete: a, nombre: '', tipo: 'carne' as const, nac: '', finca: 'N', sexo: 'H', raza: '', categoria: '', notas: '', eventos: [] }])) };
+    expect(planSenasa(db, [R('X', '999000000001', '999000000003', 3)])).toMatchObject({ nuevos: 3, omitidas: [] });
+  });
+
+  it('el plan dice por finca si queda algo que agregar (al reimportar, nada)', () => {
+    const db: Db = { animales: {} }, rangos = [R('A', '999000000001', '999000000002', 2), R('B', '999000000010', '999000000010', 1), R('A', '999000000020', '999000900000', 5)];
+    expect(planSenasa(db, rangos).porFinca).toEqual({ A: 2, B: 1 });
+    agregarSenasa(db, rangos, { A: { nombre: 'Norte', tipo: 'carne' }, B: { nombre: 'Sur', tipo: 'leche' } });
+    expect(planSenasa(db, rangos).porFinca).toEqual({});
+  });
 });

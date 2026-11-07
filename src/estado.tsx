@@ -64,7 +64,7 @@ export function restaurarPantalla() {
 }
 
 export function ir(v: Vista) {
-  detenerCamara(); quitarError(true); if (v !== est.vista) est.anterior = est.vista; est.vista = v; render(); scrollTo(0, 0);
+  detenerCamara(); quitarError('otros'); if (v !== est.vista) est.anterior = est.vista; est.vista = v; render(); scrollTo(0, 0);
   document.querySelector<HTMLElement>('main')?.focus({ preventScroll: true }); // quien usa lector de pantalla empieza en la pantalla nueva
   // Fuera de la lista se deja un paso en el historial: así el botón "atrás" del teléfono vuelve en vez de cerrar la app.
   if (v !== 'lista' && !history.state?.app) history.pushState({ app: 1 }, '');
@@ -105,11 +105,11 @@ export async function compartir(file: File, titulo: string): Promise<'compartido
 // Guarda y lo dice en pantalla (las ventanitas del navegador pueden estar bloqueadas). Sin texto, solo avisa si falló.
 export function guardarYAvisar(texto = '') {
   if (est.ejemplo || guardar(est.db)) {
-    if (document.querySelector('.aviso-mal[data-guardado]')) quitarError(); // volvió a guardar bien: el aviso de falla ya no aplica
+    quitarError('guardado'); // volvió a guardar bien: el aviso de falla ya no aplica
     if (texto) avisar(texto);
     return true;
   }
-  avisarError('No se pudo guardar. Si cierra la app se perderá lo último. Envíe una copia de seguridad ahora.', { guardado: true });
+  avisarError('No se guardó lo último. Envíe una copia de seguridad antes de cerrar la app.', { guardado: true });
   return false;
 }
 
@@ -117,29 +117,54 @@ export function guardarYAvisar(texto = '') {
 // La caja anuncia el texto (role="alert") y dentro va un botón que lo cierra con un toque, Enter o espacio.
 // guardado: el de "no se pudo guardar" no se quita al cambiar de pantalla, solo al tocarlo o cuando un guardado sale bien.
 // foco: false cuando el foco ya está donde la persona tiene que escribir (por ejemplo, el campo que falta).
-export function avisarError(texto: string, { guardado = false, foco = true } = {}) {
-  quitarError();
+// Ningún aviso flota: todos son franjas al principio de la página, en #avisos, y empujan el contenido en vez de taparlo.
+// Puede haber dos rojos a la vez: el de guardado (siempre primero) y el de otro error.
+// Un error de un campo no va aquí: va debajo de ese campo (ver «Pegue aquí una copia» y la finca del Excel).
+const franjas = () => document.getElementById('avisos') ?? document.body.insertAdjacentElement('afterbegin', <div id="avisos" /> as HTMLElement)!;
+// Mientras la franja está pegada arriba, el teclado no debe dejar el foco escondido debajo de ella (su alto cambia con el texto y el ancho).
+function ajustarFranja() {
+  const f = document.getElementById('avisos');
+  document.documentElement.style.scrollPaddingTop = f && getComputedStyle(f).position === 'sticky' ? f.offsetHeight + 'px' : '';
+}
+addEventListener('resize', ajustarFranja);
+export function avisarError(texto: string, { guardado = false, foco = !guardado }: { guardado?: boolean; foco?: boolean } = {}) {
+  quitarError(guardado ? 'guardado' : 'otros');
   const antes = document.activeElement as HTMLElement | null;
   const cerrar = () => {
-    caja.remove();
+    caja.remove(); ajustarFranja();
     // El foco vuelve a donde estaba; si ya no existe, a la pantalla.
     (antes?.isConnected && antes !== document.body ? antes : document.querySelector<HTMLElement>('main'))?.focus({ preventScroll: true });
   };
-  const caja = <div class="aviso-ok aviso-mal" role="alert" data-guardado={guardado || undefined}>
-    <button type="button" onClick={cerrar}>⚠️ {texto} (Toque para cerrar)</button>
+  const caja = <div class="aviso-mal" role="alert" data-guardado={guardado || undefined}>
+    <span>⚠️ {texto}</span>
+    <button type="button" onClick={cerrar}>✕ Cerrar</button>
   </div> as HTMLElement;
-  document.body.appendChild(caja);
+  if (guardado) franjas().prepend(caja); else franjas().appendChild(caja);
+  ajustarFranja();
+  // Con foco (por ejemplo, un archivo que no se pudo leer) la página sube hasta el aviso. El de guardado no se lleva el foco:
+  // se anuncia igual (role="alert") y no hace saltar la página mientras se anota.
   if (foco) caja.querySelector('button')!.focus();
 }
-// Quita el aviso rojo. Al cambiar de pantalla (soloSiNoEsDeGuardado) se deja el de "no se pudo guardar".
-export function quitarError(soloSiNoEsDeGuardado = false) {
-  const el = document.querySelector<HTMLElement>('.aviso-mal');
-  if (el && !(soloSiNoEsDeGuardado && el.hasAttribute('data-guardado'))) el.remove();
+// Quita avisos rojos: los de otros errores (al cambiar de pantalla o leer bien un archivo), el de guardado, o todos.
+// Si el aviso tenía el foco, el foco pasa a la pantalla en vez de perderse en <body>.
+export function quitarError(cuales: 'otros' | 'guardado' | 'todos' = 'todos') {
+  for (const el of document.querySelectorAll<HTMLElement>('.aviso-mal')) {
+    const esGuardado = el.hasAttribute('data-guardado');
+    if (cuales === 'otros' && esGuardado || cuales === 'guardado' && !esGuardado) continue;
+    const teniaFoco = el.contains(document.activeElement);
+    el.remove();
+    if (teniaFoco) document.querySelector<HTMLElement>('main')?.focus({ preventScroll: true });
+  }
+  ajustarFranja();
 }
 
 // Mensaje grande que confirma que algo quedó guardado.
-export function avisar(texto: string) {
-  const el = <div class="aviso-ok" role="status">{texto}</div> as HTMLElement;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2200);
+// ms: más tiempo para un mensaje largo (por ejemplo, lo que trajo una copia recuperada).
+// Es una franja más, debajo de los rojos; uno nuevo reemplaza al anterior, y se puede cerrar antes con un toque.
+export function avisar(texto: string, ms = 2200) {
+  document.querySelector('#avisos .aviso-ok')?.remove();
+  const quitar = () => { el.remove(); ajustarFranja() };
+  const el = <div class="aviso-ok" role="status"><span>{texto}</span><button type="button" onClick={quitar}>✕ Cerrar</button></div> as HTMLElement;
+  franjas().appendChild(el); ajustarFranja();
+  setTimeout(quitar, ms);
 }

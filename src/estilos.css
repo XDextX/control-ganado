@@ -32,6 +32,7 @@ input,select,textarea{width:100%}
 .row>*{flex:1 1 140px}
 .row>input[type=search]{flex-basis:100%}
 .item{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;cursor:pointer}
+button.item{width:100%;text-align:left;background:none;border:0;padding:4px 0;color:inherit;font:inherit;min-height:48px} /* aviso de la lista: botón con aspecto de renglón */
 .tag{white-space:nowrap}
 .mut{color:var(--mut);font-size:.95em}
 .tag{font-size:.85em;padding:2px 8px;border-radius:99px;border:1px solid var(--line)}
@@ -49,11 +50,21 @@ summary{font-weight:600;padding:14px;border:2px dashed var(--line);border-radius
 .eventos button{font-weight:600;padding:16px 8px;min-height:72px}
 .eventos button[aria-pressed=true]{background:#2f6f3e;color:#fff;border-color:#2f6f3e;outline:3px solid #f0b070}
 /* Mensaje "Guardado" */
-.aviso-ok{position:fixed;left:16px;right:16px;bottom:24px;margin:auto;max-width:500px;background:#1f5f30;color:#fff;font-size:1.3em;font-weight:700;text-align:center;padding:20px;border-radius:14px;box-shadow:0 6px 24px #0006;z-index:10}
 main:focus{outline:none}
+/* Avisos: franjas al principio de la página (#avisos), nunca flotando, así no tapan ningún botón ni campo.
+   Verde para confirmar, rojo para errores; el texto a la izquierda y «✕ Cerrar» a la derecha. */
+.aviso-ok,.aviso-mal{display:flex;gap:12px;align-items:center;padding:12px 16px;color:#fff;font-weight:600}
+.aviso-ok{background:#1f5f30}
 .aviso-mal{background:#a32020}
-.aviso-mal button{display:block;width:100%;background:none;border:0;color:inherit;font:inherit;text-align:center;padding:0;min-height:0}
-.aviso-mal button:focus-visible{outline:3px solid #fff;outline-offset:6px}
+.aviso-ok span,.aviso-mal span{flex:1}
+.aviso-ok button,.aviso-mal button{flex:0 0 auto;background:#fff;border:0;font-weight:700;min-height:48px;padding:8px 14px}
+.aviso-ok button{color:#1f5f30}
+.aviso-mal button{color:#a32020}
+.aviso-ok button:focus-visible,.aviso-mal button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+/* El de guardado y el verde quedan a la vista al bajar; una línea separa dos avisos seguidos */
+#avisos:has(.aviso-mal[data-guardado], .aviso-ok){position:sticky;top:0;z-index:5}
+#avisos > * + * { border-top: 1px solid #0005 }
+.error-campo{color:var(--bad);font-weight:600;margin:4px 0 0}
 /* Zona de borrado: roja para que se note que es peligrosa */
 details.peligro summary{border-color:var(--bad);color:var(--bad)}
 button.peligro{background:#a32020;color:#fff;border-color:#a32020}
@@ -81,6 +92,7 @@ input.malo{border-color:var(--bad);background:#fde8e8;color:#1a1a1a}
 .foto-reporte{display:block;width:100%;border:1px solid var(--line);border-radius:10px;margin:10px 0}
 /* Tarjeta de animal en la lista */
 .tarjeta{cursor:pointer}
+.tarjeta:focus-visible,.item:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 .tarjeta>div{margin-top:4px}
 .tarjeta-cabeza{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px}
 .tags{display:flex;flex-wrap:wrap;gap:6px}

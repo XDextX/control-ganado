@@ -154,6 +154,21 @@ export function reporteAImagen(r: Reporte): HTMLCanvasElement {
   // Los teléfonos no dibujan imágenes gigantes (iPhone: ~16 millones de puntos). Si no cabe, se corta con una nota.
   const MAX_ALTO = 12000;
   let y = 200, faltan = 0;
+  const ancho = W - 2 * P;
+  // Filas (con encabezado), cuáles van en negrita y cómo medir el ancho de cada columna con letra de tamaño "tam":
+  // el texto entero, o solo su palabra más larga (lo mínimo para no partir palabras).
+  const tabla = (s: Seccion) => {
+    const filas = s.cols.length ? [s.cols, ...s.filas] : s.filas, n = filas[0].length;
+    const negrita = (k: number, i: number) => (s.cols.length > 0 && k === 0) || (!s.cols.length && i === 0);
+    const medir = (tam: number, palabra: boolean) => Array.from({ length: n }, (_, i) => Math.max(...filas.flatMap((f, k) => {
+      x.font = F(negrita(k, i) ? 700 : 400, tam);
+      return (palabra ? (f[i] ?? '').split(' ') : [f[i] ?? '']).map(t => x.measureText(t).width);
+    })) + 28);
+    return { filas, n, negrita, medir };
+  };
+  // Con muchas columnas, la letra de las tablas se achica un poco (hasta 24 px) para que ninguna palabra se parta.
+  // Un solo tamaño para toda la imagen: el que necesita la tabla más ancha.
+  const T = Math.min(30, ...r.secciones.filter(s => s.filas.length).map(s => [30, 27, 24].find(t => tabla(s).medir(t, true).reduce((a, b) => a + b, 0) <= ancho) ?? 24)), esc = T / 30;
   secciones: for (const [si, s] of r.secciones.entries()) {
     if (y > MAX_ALTO - 300) { faltan += r.secciones.slice(si).reduce((n, x) => n + x.filas.length, 0); break }
     if (s.titulo) { const yy = y; pasos.push(() => { x.fillStyle = '#2f6f3e'; x.font = F(700, 38); x.fillText(corta(s.titulo, W - 2 * P), P, yy) }); y += 56 }
@@ -164,15 +179,7 @@ export function reporteAImagen(r: Reporte): HTMLCanvasElement {
       y += renglones.length * RENGLON + 12;
     }
     if (!s.filas.length) continue;
-    const filas = s.cols.length ? [s.cols, ...s.filas] : s.filas, n = filas[0].length, ancho = W - 2 * P;
-    const negrita = (k: number, i: number) => (s.cols.length > 0 && k === 0) || (!s.cols.length && i === 0);
-    // Ancho de cada columna con letra de tamaño "tam": el texto entero, o solo su palabra más larga (lo mínimo para no partir palabras).
-    const medir = (tam: number, palabra: boolean) => Array.from({ length: n }, (_, i) => Math.max(...filas.flatMap((f, k) => {
-      x.font = F(negrita(k, i) ? 700 : 400, tam);
-      return (palabra ? (f[i] ?? '').split(' ') : [f[i] ?? '']).map(t => x.measureText(t).width);
-    })) + 28);
-    // Con muchas columnas, la letra de la tabla se achica un poco (hasta 24 px) para que ninguna palabra se parta.
-    const T = [30, 27, 24].find(t => medir(t, true).reduce((a, b) => a + b, 0) <= ancho) ?? 24, esc = T / 30;
+    const { filas, n, negrita, medir } = tabla(s);
     const anchos = medir(T, false), total = anchos.reduce((a, b) => a + b, 0);
     // Si no caben enteras: cada columna tiene al menos el ancho de su palabra más larga (un arete no se parte),
     // y lo que sobra se reparte según cuánto le falta a cada una para verse en un solo renglón.

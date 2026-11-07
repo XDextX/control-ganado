@@ -22,10 +22,10 @@ function Resumen() {
   const r = est.senasa!.resultado!;
   return (
     <section>
-      <h2>✅ Excel de SENASA agregado</h2>
+      <h2 tabindex="-1" id="s-resumen">✅ Excel de SENASA agregado</h2>
       <div class="card">
         <p><b>{r.nuevos ? `Se agregaron ${cuantos(r.nuevos, 'animal nuevo', 'animales nuevos')}.` : 'No había aretes nuevos para agregar.'}</b></p>
-        {r.fincasLlenadas > 0 && <p>A {cuantos(r.fincasLlenadas, 'animal que ya estaba', 'animales que ya estaban')} sin finca se le puso la finca del Excel.</p>}
+        {r.fincasLlenadas > 0 && <p>{r.fincasLlenadas === 1 ? 'Al animal que no tenía finca' : `A los ${r.fincasLlenadas} animales que no tenían finca`} se le{r.fincasLlenadas === 1 ? '' : 's'} puso la finca del Excel.</p>}
         {r.omitidas.map(o => <p class="warn">⚠️ {o.finca}: {textoOmitida(o)}</p>)}
         <p class="mut">No se borró nada. Los animales nuevos llevan una nota para completar sexo, raza y nacimiento.</p>
       </div>
@@ -42,21 +42,23 @@ export function Senasa() {
   const plan = planSenasa(est.db, p.rangos), demasiados = plan.nuevos > MAX_NUEVOS, hayAlgo = plan.nuevos + plan.sinFinca > 0;
   const omitidasDe = (f: string) => plan.omitidas.filter(o => o.finca === f);
   // Una finca cuyas entregas no se agregan no necesita elegir finca ni leche o carne.
-  const seAgrega = (f: string) => omitidasDe(f).length < p.rangos.filter(r => r.finca === f).length;
+  // Solo pide finca y tipo donde hay algo que agregar (al reimportar, una finca con todo ya en la app no muestra campos).
+  const seAgrega = (f: string) => (plan.porFinca[f] ?? 0) > 0;
   const agregar = () => {
     const sinNombre = enExcel.findIndex(f => seAgrega(f) && !p.destinos[f].nombre);
     if (sinNombre >= 0) {
-      // El foco se queda en el campo vacío: el aviso no se lo quita.
-      avisarError(`Escriba a qué finca van los aretes de «${enExcel[sinNombre]}».`, { foco: false });
+      // El error va debajo de su campo (no flota) y el foco se queda en el campo vacío.
+      document.getElementById('s-finca-error-' + sinNombre)!.textContent = 'Escriba a qué finca van estos aretes.';
       return document.getElementById('s-finca-' + sinNombre)?.focus();
     }
     // Si el teléfono no puede guardar (sin espacio), se vuelve a como estaba: nada queda solo en memoria.
     const antes = JSON.stringify(est.db), r = agregarSenasa(est.db, p.rangos, p.destinos);
     if (!guardarYAvisar()) {
-      est.db = JSON.parse(antes); quitarError(); est.senasa = null; volver();
+      est.db = JSON.parse(antes); quitarError('otros'); est.senasa = null; volver(); // el aviso de guardado se queda
       return avisarError('No se pudo guardar: el teléfono no tiene espacio. No se agregó nada; todo quedó como estaba.');
     }
     p.resultado = r; render(); scrollTo(0, 0);
+    document.getElementById('s-resumen')?.focus(); // el foco va al resumen, no se pierde en la página
   };
   return (
     <section>
@@ -75,7 +77,9 @@ export function Senasa() {
             {omitidasDe(f).map(o => <p class="warn">⚠️ {textoOmitida(o)}</p>)}
             {seAgrega(f) && <>
               <label for={'s-finca-' + i}>Finca en la app</label>
-              <input id={'s-finca-' + i} list="s-fincas" maxlength="80" value={d.nombre} onInput={(e: Event) => { d.nombre = (e.target as HTMLInputElement).value.trim(); marcar() }} />
+              <input id={'s-finca-' + i} list="s-fincas" maxlength="80" value={d.nombre} aria-describedby={'s-finca-error-' + i}
+                onInput={(e: Event) => { d.nombre = (e.target as HTMLInputElement).value.trim(); marcar(); document.getElementById('s-finca-error-' + i)!.textContent = '' }} />
+              <p class="error-campo" id={'s-finca-error-' + i} role="alert"></p>
               <p class="ayuda" ref={(el: HTMLElement) => { etiqueta = el; marcar() }}></p>
               <div class="eventos">
                 {(['leche', 'carne'] as const).map(t => (

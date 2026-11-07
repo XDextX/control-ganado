@@ -14,24 +14,39 @@ export async function guardarCopia() {
   avisar(r === 'compartido' ? '✅ Copia enviada' : '💾 Revise que la copia esté en Descargas');
 }
 
+// Más que esto no es una copia de esta app (una de cientos de animales y años de pesajes pesa pocos MB).
+const MAX_COPIA = 20 * 2 ** 20;
+
 export function CopiaSeguridad() {
   const juntar = (texto: string, que: string) => {
+    const esArchivo = que === 'Ese archivo';
+    // Una copia de verdad pesa unos KB; un archivo enorme colgaría la pantalla al leerlo.
+    if (texto.length > MAX_COPIA) return avisarError(`${que} es demasiado grande para ser una copia de esta app.`);
     if (est.ejemplo) verEjemplo(false); // una copia real nunca se junta con el ejemplo, que no se guarda
-    try {
-      const n = fusionar(est.db, JSON.parse(texto.trim()));
-      // Recuperar no cuenta como respaldo: lo juntado no está en ninguna otra parte.
-      const ok = guardarYAvisar(); volver(); if (ok) alert(`Copia recuperada.\n\nSe agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}. No se borró nada.${n.descartados ? (n.descartados === 1 ? '\n\nSe ignoró 1 dato dañado que venía mal escrito.' : `\n\nSe ignoraron ${n.descartados} datos dañados que venían mal escritos.`) : ''}`);
-    } catch (err) { alert(`${que} no es una copia de esta app.\n\n` + (err as Error).message) }
+    let n;
+    // Si el teléfono no puede guardar, se vuelve a como estaba: lo juntado no queda solo en memoria.
+    const antes = JSON.stringify(est.db);
+    try { n = fusionar(est.db, JSON.parse(texto.trim())) }
+    catch (err) {
+      // Un texto que no es JSON trae un mensaje técnico del navegador: se dice en palabras simples.
+      return avisarError(err instanceof SyntaxError
+        ? (esArchivo ? 'Ese archivo está incompleto o no es una copia de esta app. Pida que le manden la copia otra vez.' : 'Ese texto está cortado. Copie el mensaje completo y péguelo otra vez.')
+        : `${que} no es una copia de esta app (${(err as Error).message}).`);
+    }
+    // Recuperar no cuenta como respaldo: lo juntado no está en ninguna otra parte.
+    if (!guardarYAvisar()) { est.db = JSON.parse(antes); return volver() }
+    volver();
+    avisar(`✅ Copia recuperada: ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}. No se borró nada.${n.descartados ? (n.descartados === 1 ? ' Se ignoró 1 dato dañado.' : ` Se ignoraron ${n.descartados} datos dañados.`) : ''}`, 7000);
   };
   const recuperar = async (e: Event) => {
     const inp = e.target as HTMLInputElement, file = inp.files?.[0]; inp.value = '';
     if (!file) return;
-    if (!/\.xlsx$/i.test(file.name)) return juntar(await file.text(), 'Ese archivo');
+    if (!/\.xlsx$/i.test(file.name)) return file.size > MAX_COPIA ? avisarError('Ese archivo es demasiado grande para ser una copia de esta app.') : juntar(await file.text(), 'Ese archivo');
     // El Excel de SENASA no se junta de una vez: primero se elige a qué finca va cada entrega y de qué tipo son.
     try {
       if (est.ejemplo) verEjemplo(false);
       const rangos = rangosDeSenasa(await leerXlsx(await file.arrayBuffer()));
-      quitarError(); // el Excel bueno quita el aviso de un intento anterior
+      quitarError('otros'); // el Excel bueno quita el aviso de un intento anterior (no el de guardado)
       est.senasa = { rangos, destinos: Object.fromEntries([...new Set(rangos.map(r => r.finca))].map(f => [f, propuestaDeFinca(est.db, f)])) };
       ir('senasa');
     } catch (err) { avisarError('No se pudo leer ese Excel: ' + (err as Error).message + '. Descargue otra vez el Excel de SENASA y pruebe de nuevo.') }
@@ -42,9 +57,9 @@ export function CopiaSeguridad() {
     try { await navigator.share({ text: texto }); marcarRespaldo(); render(); return avisar('✅ Copia enviada') }
     catch (e) { if ((e as Error).name === 'AbortError') return }
     try { await navigator.clipboard.writeText(texto); avisar('✅ Copia copiada: péguela en un mensaje') }
-    catch { manual.value = texto; manual.classList.remove('hide'); manual.select(); alert('Mantenga el dedo sobre el texto marcado y elija Copiar. Después péguelo en un mensaje.') }
+    catch { manual.value = texto; manual.classList.remove('hide'); manual.select(); avisar('Mantenga el dedo sobre el texto marcado y elija Copiar. Después péguelo en un mensaje.', 8000) }
   };
-  let archivo!: HTMLInputElement, manual!: HTMLTextAreaElement, pegado!: HTMLTextAreaElement;
+  let archivo!: HTMLInputElement, manual!: HTMLTextAreaElement, pegado!: HTMLTextAreaElement, falta!: HTMLElement;
   return (
     <details open={!Object.keys(est.db.animales).length}>
       <summary>⚙️ Copia de seguridad</summary>
@@ -60,8 +75,13 @@ export function CopiaSeguridad() {
       <button class="grande" onClick={enviarTexto}>✉️ Enviar la copia como texto</button>
       <textarea class="hide" rows="4" readonly ref={(el: HTMLTextAreaElement) => (manual = el)}></textarea>
       <label for="c-pegar">Pegue aquí una copia recibida como texto</label>
-      <textarea id="c-pegar" rows="3" ref={(el: HTMLTextAreaElement) => (pegado = el)}></textarea>
-      <button class="grande" onClick={() => pegado.value.trim() ? juntar(pegado.value, 'Ese texto') : alert('Primero pegue el texto de la copia en el cuadro.')}>📥 Recuperar la copia pegada</button>
+      <textarea id="c-pegar" rows="3" aria-describedby="c-pegar-error" ref={(el: HTMLTextAreaElement) => (pegado = el)} onInput={() => { falta.textContent = '' }}></textarea>
+      {/* Este error va debajo de su cuadro, no flotando: así no tapa el cuadro donde hay que pegar */}
+      <p id="c-pegar-error" class="error-campo" role="alert" ref={(el: HTMLElement) => (falta = el)}></p>
+      <button class="grande" onClick={() => {
+        if (pegado.value.trim()) { falta.textContent = ''; return juntar(pegado.value, 'Ese texto') }
+        falta.textContent = 'Primero pegue el texto de la copia en este cuadro.'; pegado.focus();
+      }}>📥 Recuperar la copia pegada</button>
     </details>
   );
 }
