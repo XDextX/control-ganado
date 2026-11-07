@@ -1,5 +1,6 @@
 import { h } from '../jsx';
 import { CORREO_COMENTARIOS, REPOSITORIO } from '../config';
+import { errorCampo } from '../estado';
 
 // Solo se envía lo que la persona escribe: nunca datos del ganado.
 export function Comentarios() {
@@ -7,7 +8,7 @@ export function Comentarios() {
   const asunto = 'Comentario sobre Registro de Ganado';
   const leer = () => {
     const t = texto.value.trim();
-    if (!t) { alert('Primero escriba su comentario en el cuadro.'); texto.focus() }
+    if (!t) errorCampo(texto, 'Primero escriba su comentario en el cuadro.');
     return t;
   };
   const porCorreo = () => {

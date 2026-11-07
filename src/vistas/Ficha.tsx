@@ -1,6 +1,6 @@
 import { h } from '../jsx';
 import { Animal, CAMPOS, CATEGORIAS, areteValido, esRepeticion, juntar, nombreA, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, hoy, kilos, nuevoId, ordenados, pesajeDe, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
-import { abrir, est, guardarYAvisar, ir, mostrarReporte, render, volver } from '../estado';
+import { abrir, avisarError, errorCampo, est, guardarYAvisar, ir, mostrarReporte, render, volver } from '../estado';
 import { EliminarAnimal } from '../componentes/EliminarDatos';
 import { NombreYArete } from '../componentes/Arete';
 import { Ordenos } from '../componentes/Ordenos';
@@ -22,18 +22,21 @@ function Formulario({ a }: { a: Animal | null }) {
     e.preventDefault();
     const { db } = est, f = e.target as HTMLFormElement, val = (k: string) => (f.elements.namedItem(k) as HTMLInputElement).value.trim();
     const arete = val('arete');
-    if (!areteValido(arete)) return alert('Ese número de arete no es válido. Use hasta 40 letras o números.');
+    if (!areteValido(arete)) return errorCampo(f.elements.namedItem('arete') as HTMLInputElement, 'Ese número de arete no es válido. Use hasta 40 letras o números.');
     if (arete !== a?.arete && Object.hasOwn(db.animales, arete)) {
-      if (!a) return alert('Ya existe un animal con el arete ' + arete);
+      if (!a) return errorCampo(f.elements.namedItem('arete') as HTMLInputElement, 'Ya existe un animal con el arete ' + arete + '.');
       return ofrecerJuntar(a, db.animales[arete], () => { for (const k of CAMPOS) if (k !== 'arete') (a as any)[k] = val(k) });
     }
-    const nuevo = a ?? ({ eventos: [] } as unknown as Animal);
-    if (a && arete !== a.arete) delete db.animales[a.arete];
+    const nuevo = a ?? ({ eventos: [] } as unknown as Animal), viejo = a?.arete; // el bucle de abajo cambia a.arete
+    const cambio = viejo !== undefined && arete !== viejo;
+    if (cambio) delete db.animales[viejo];
     for (const k of CAMPOS) (nuevo as any)[k] = val(k);
     nuevo.creado ??= hoy();
-    db.animales[arete] = nuevo; guardarYAvisar('✅ Animal guardado'); abrir(arete);
+    // Con arete cambiado no va el verde: pegado arriba junto al rojo de abajo taparía media pantalla. Si falla, avisa igual.
+    db.animales[arete] = nuevo; guardarYAvisar(cambio ? '' : '✅ Animal guardado'); abrir(arete);
     // Los otros teléfonos no saben del cambio: al juntar copias quedaría el animal dos veces.
-    if (a && arete !== a.arete) alert(`El arete cambió de ${a.arete} a ${arete}.\n\nSi este animal también está en otros teléfonos, cámbielo allá igual. Si no, al pasar los datos quedará repetido.`);
+    // Rojo y fijo hasta cerrarlo: es importante.
+    if (cambio) avisarError(`El arete cambió a ${arete}. Si este animal está en otros teléfonos, cámbielo allá también o quedará repetido.`);
   };
   return (
     <form class="card" onSubmit={guardarAnimal}>
@@ -80,7 +83,7 @@ const OTROS: [TipoEvento, string, string?][] = [
 function NuevoEvento({ a }: { a: Animal }) {
   let tipo!: HTMLInputElement, motivo!: HTMLInputElement, otroBox!: HTMLElement, form!: HTMLElement, destinoBox!: HTMLElement, guardarBtn!: HTMLElement;
   const elegir = (t: string, m: string, boton: HTMLElement) => {
-    tipo.value = t; motivo.value = m;
+    tipo.value = t; motivo.value = m; document.getElementById('f-que-error')?.replaceChildren();
     for (const b of form.querySelectorAll('.eventos button')) b.setAttribute('aria-pressed', String(b === boton));
     destinoBox.classList.toggle('hide', t !== 'traslado');
     // Una salida saca al animal de la lista: el botón lo dice claro (en lugar de una ventanita de confirmación).
@@ -90,11 +93,11 @@ function NuevoEvento({ a }: { a: Animal }) {
   const enviar = (e: Event) => {
     e.preventDefault();
     const f = e.target as HTMLFormElement, val = (k: string) => (f.elements.namedItem(k) as HTMLInputElement).value.trim();
-    if (!tipo.value) return alert('Primero toque qué pasó: Monta, Parto, Secado, Celo u Otro.');
+    if (!tipo.value) return errorCampo(form.querySelector<HTMLElement>('#f-que')!, 'Primero toque qué pasó: Monta, Parto, Secado, Celo u Otro.');
     if (tipo.value === 'traslado') {
       const hacia = val('destino');
-      if (!hacia) return alert('Escriba o elija la finca a la que pasó.');
-      if (hacia === a.finca) return alert(`El animal ya está en ${hacia}.`);
+      if (!hacia) return errorCampo(f.elements.namedItem('destino') as HTMLInputElement, 'Escriba o elija la finca a la que pasó.');
+      if (hacia === a.finca) return errorCampo(f.elements.namedItem('destino') as HTMLInputElement, `El animal ya está en ${hacia}.`);
       trasladar(a, hacia, val('fecha'), val('nota')); render(); guardarYAvisar('✅ Pasó a ' + hacia); return;
     }
     const ev = { id: nuevoId(), tipo: tipo.value as TipoEvento, fecha: val('fecha'), nota: val('nota'), motivo: undefined as string | undefined };
@@ -108,7 +111,7 @@ function NuevoEvento({ a }: { a: Animal }) {
       <h2>¿Qué pasó con este animal?</h2>
       <input type="hidden" ref={(el: HTMLInputElement) => (tipo = el)} />
       <input type="hidden" ref={(el: HTMLInputElement) => (motivo = el)} />
-      <div class="eventos">
+      <div class="eventos" id="f-que" role="group" aria-label="¿Qué pasó?" tabindex="-1">
         {COMUNES.map(([t, texto]) => <button type="button" aria-pressed="false"
           onClick={(e: Event) => { otroBox.classList.add('hide'); elegir(t, '', e.currentTarget as HTMLElement) }}>{texto}</button>)}
         <button type="button" aria-pressed="false" style="grid-column:1/-1"

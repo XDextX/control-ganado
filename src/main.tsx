@@ -1,6 +1,6 @@
 import { h, Fragment } from './jsx';
 import './estilos.css';
-import { Vista, alPintar, est, render, restaurarPantalla, verEjemplo } from './estado';
+import { Vista, alPintar, avisarProblemaAlCargar, est, render, restaurarPantalla, verEjemplo } from './estado';
 import { Encabezado } from './componentes/Encabezado';
 import { Lista } from './vistas/Lista';
 import { Ficha } from './vistas/Ficha';
@@ -17,6 +17,7 @@ alPintar(() => raiz.replaceChildren(<Encabezado />, <>{est.ejemplo && <div class
 
 restaurarPantalla();
 render();
+avisarProblemaAlCargar();
 // Pide que el navegador no borre los datos cuando le falte espacio. Si no lo concede, todo sigue igual.
 navigator.storage?.persist?.().catch(() => {});
 // Sin señal en el campo. Solo en producción: en desarrollo el caché estorbaría los cambios.

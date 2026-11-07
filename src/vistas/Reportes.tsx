@@ -1,7 +1,7 @@
 import { h, Fragment } from '../jsx';
 import { fmt, hoy } from '../datos';
 import { Reporte, fechasDePesaje, ficha, inventario, partos, pesajes, reporteAImagen, salidas, traslados } from '../reportes';
-import { compartir, est, ir, mostrarReporte, render, volver } from '../estado';
+import { avisar, avisarError, compartir, est, ir, mostrarReporte, render, volver } from '../estado';
 
 export function MenuReportes() {
   verFoto = false; // al elegir otro reporte, empezar por la tabla
@@ -28,9 +28,9 @@ let verFoto = false;
 export function VerReporte() {
   const r = armar();
   const enviarFoto = () => reporteAImagen(r).toBlob(async blob => {
-    if (!blob) return alert('El teléfono no pudo crear la foto del reporte. Use “Guardar PDF / Imprimir”.');
+    if (!blob) return avisarError('El teléfono no pudo crear la foto del reporte. Use “Guardar PDF / Imprimir”.');
     const file = new File([blob], `reporte-${est.repTipo}-${hoy()}.png`, { type: 'image/png' });
-    if (await compartir(file, r.titulo) === 'descargado') alert('Se descargó la imagen del reporte. Puede enviarla por mensaje desde sus descargas.');
+    if (await compartir(file, r.titulo) === 'descargado') avisar('💾 Se descargó la imagen del reporte. Puede enviarla por mensaje desde sus descargas.', 7000);
   }, 'image/png');
 
   if (verFoto) return (

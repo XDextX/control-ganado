@@ -1,7 +1,7 @@
 // Pantallas de códigos QR: mostrar el de un animal o del corral, pasar lo anotado y escanear.
 import { h, Fragment } from '../jsx';
 import { areteValido, cambiosDesde, cuantos, fusionar, hoy, sumarDias } from '../datos';
-import { abrir, avisar, est, guardarYAvisar, ir, render, verEjemplo, volver } from '../estado';
+import { abrir, avisar, avisarError, est, guardarYAvisar, ir, render, verEjemplo, volver } from '../estado';
 import { Escaner, ImagenQr, interpretar, qrDeAnimal, qrDeDatos } from '../qr';
 
 export function VerQr() {
@@ -23,30 +23,34 @@ export function VerQr() {
 
 function leerQr(texto: string) {
   let l;
-  try { l = interpretar(texto) } catch { alert('El código QR no se pudo leer. Intente de nuevo.'); return ir('escaner') }
+  // El aviso va después de ir(): cambiar de pantalla quita los avisos rojos.
+  try { l = interpretar(texto) } catch { enPausa = true; ir('escaner'); return avisarError('El código QR no se pudo leer. Intente de nuevo.') }
   if (l.tipo === 'animal') {
     if (est.ejemplo) verEjemplo(false); // lo recibido es real: no se junta con el ejemplo, que no se guarda
     try {
       const n = fusionar(est.db, l.datos);
       if (!guardarYAvisar()) return ir('lista');
-      alert(`Listo. Se agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}.\n\nNo se borró nada.${n.descartados ? (n.descartados === 1 ? '\n\nSe ignoró 1 dato dañado que venía mal escrito.' : `\n\nSe ignoraron ${n.descartados} datos dañados que venían mal escritos.`) : ''}`);
       const aretes = Object.values((l.datos as { animales: Record<string, { arete: string }> }).animales).map(a => a.arete.trim());
-      return aretes.length === 1 && Object.hasOwn(est.db.animales, aretes[0]) ? abrir(aretes[0]) : volver();
-    } catch (e) { alert('Este código no es de la app de ganado. ' + (e as Error).message); return ir('lista') }
+      if (aretes.length === 1 && Object.hasOwn(est.db.animales, aretes[0])) abrir(aretes[0]); else volver();
+      return avisar(`✅ Listo. Se agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}. No se borró nada.${n.descartados ? (n.descartados === 1 ? ' Se ignoró 1 dato dañado que venía mal escrito.' : ` Se ignoraron ${n.descartados} datos dañados que venían mal escritos.`) : ''}`, 7000);
+    } catch (e) { ir('lista'); return avisarError('Este código no es de la app de ganado. ' + (e as Error).message) }
   }
-  if (!areteValido(l.arete)) { alert('Este código QR no es de un arete ni de la app de ganado.'); return ir('lista') }
+  if (!areteValido(l.arete)) { ir('lista'); return avisarError('Este código QR no es de un arete ni de la app de ganado.') }
   if (Object.hasOwn(est.db.animales, l.arete)) return abrir(l.arete);
   // Arete nuevo: se abre el alta ya con el número puesto (si no quiere, toca Volver). Sin ventanita de confirmación.
   est.nuevo = { arete: l.arete.trim() }; abrir(null); est.nuevo = {};
   avisar(`Arete ${l.arete.trim()} no registrado: complete el alta`);
 }
 
+// Tras un QR que no se pudo leer, la cámara espera a que la persona toque: si se encendiera sola, leería el mismo código sin parar.
+let enPausa = false;
 export function VerEscaner() {
+  const pausa = enPausa; enPausa = false; // vale para este pintado; el siguiente (Intentar de nuevo) enciende la cámara
   return (
     <section>
       <button onClick={volver}>← Volver</button>
       <h2>Escanear código QR</h2>
-      <Escaner alLeer={leerQr} reintentar={render} />
+      {pausa ? <button class="grande pri" onClick={render}>📷 Intentar de nuevo</button> : <Escaner alLeer={leerQr} reintentar={render} />}
     </section>
   );
 }

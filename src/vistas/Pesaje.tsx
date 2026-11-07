@@ -1,7 +1,7 @@
 // Planilla del día de pesaje: todas las vacas de leche de una finca, con mañana y tarde en kilos.
 import { h, Fragment } from '../jsx';
 import { Evento, MAX_KILOS, REGLA_CONCENTRADO, concentrado, cuantos, esRaro, fincas, fmt, guardarPesajes, hoy, kilos, leerKilos, pesajeAnterior, pesajeDe, totalPesaje, vacasDeLeche } from '../datos';
-import { est, guardarYAvisar, mostrarReporte, render, volver } from '../estado';
+import { avisarError, est, guardarYAvisar, mostrarReporte, render, volver } from '../estado';
 import { NombreYArete } from '../componentes/Arete';
 import { Ordenos } from '../componentes/Ordenos';
 
@@ -47,7 +47,11 @@ export function Pesaje() {
   };
   const guardarTodo = () => {
     const malos = filas.filter(f => Number.isNaN(valor(f.am)) || Number.isNaN(valor(f.pm)));
-    if (malos.length) return alert(`Revise los números en rojo (${malos.length}). Use solo números, por ejemplo 12,5. Máximo ${MAX_KILOS} kg por ordeño.`);
+    if (malos.length) {
+      // La planilla es larga: el foco va al primer número malo, no al aviso de arriba (se anuncia igual).
+      avisarError(`Revise los números en rojo (${malos.length}). Use solo números, por ejemplo 12,5. Máximo ${MAX_KILOS} kg por ordeño.`, { foco: false });
+      return document.querySelector<HTMLInputElement>('input.malo')?.focus();
+    }
     const n = guardarPesajes(est.db, fecha, filas.map(f => ({ arete: f.arete, am: valor(f.am), pm: valor(f.pm) })));
     if (!guardarYAvisar(`✅ Pesaje guardado: ${cuantos(n, 'vaca', 'vacas')}`)) return;
     for (const f of filas) for (const o of ['am', 'pm']) borradores.delete(clave(fecha, f.arete, o));

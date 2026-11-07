@@ -55,9 +55,13 @@ export function limpiarAnimal(a: any): { animal: Animal; descartados: number } |
   return { animal, descartados: a.eventos.length - eventos.length + cortados + perdidos(a, animal, ['nombre', 'nac', 'finca', 'raza', 'categoria', 'notas']) };
 }
 
+// Lo que salió mal al leer lo guardado. La pantalla lo muestra (estado.tsx) cuando ya existe: aquí todavía no hay página.
+export let problemaAlCargar = '';
+export const olvidarProblemaAlCargar = () => { problemaAlCargar = '' };
 export function cargar(): Db {
   const db: Db = { animales: {} };
   let crudo: string | null = null;
+  problemaAlCargar = '';
   try {
     crudo = localStorage.getItem(KEY);
     const datos = crudo ? JSON.parse(crudo) : null;
@@ -67,12 +71,12 @@ export function cargar(): Db {
     if (malos) {
       // Primero el rescate; lo limpio se guarda solo si el rescate quedó, y así el aviso no se repite en cada apertura.
       try { localStorage.setItem(KEY + '.danado-' + Date.now(), crudo!); localStorage.setItem(KEY, JSON.stringify(db)) } catch { /* sin espacio */ }
-      alert(`Había ${malos === 1 ? '1 dato dañado o demasiado largo' : malos + ' datos dañados o demasiado largos'} y se quitó de la lista. Lo guardado antes quedó aparte: en “⚙️ Copia de seguridad” puede guardar los datos rescatados.`);
+      problemaAlCargar = `Había ${malos === 1 ? '1 dato dañado o demasiado largo' : malos + ' datos dañados o demasiado largos'} y se quitó de la lista. Lo guardado antes quedó aparte: en “⚙️ Copia de seguridad” puede guardar los datos rescatados.`;
     }
   } catch {
     // Se guarda lo ilegible aparte antes de seguir: el próximo guardado no debe borrar lo único que había.
     try { if (crudo) localStorage.setItem(KEY + '.danado-' + Date.now(), crudo) } catch { /* sin espacio */ }
-    alert('No se pudieron leer los datos guardados. Quedaron aparte: en “⚙️ Copia de seguridad” puede guardar los datos rescatados. Recupere su copia de seguridad.');
+    problemaAlCargar = 'No se pudieron leer los datos guardados. Quedaron aparte: en “⚙️ Copia de seguridad” puede guardar los datos rescatados. Recupere su copia de seguridad.';
   }
   return db;
 }
