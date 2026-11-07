@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ficha, inventario, partos, pesajes, salidas, traslados } from './reportes';
-import { Animal, Db, KEY, alertas, cargar, datosDeEjemplo, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
+import { Animal, Db, KEY, alertas, juntar, cargar, datosDeEjemplo, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
@@ -269,5 +269,18 @@ describe('ejemplo y reportes', () => {
   it('la ficha muestra el celo como repetición', () => {
     const filas = ficha(db.animales['CR-001-4547']).secciones.flatMap(s => s.filas).flat().join();
     expect(filas).toContain('repetición');
+  });
+});
+
+describe('juntar un arete provisional con el registrado', () => {
+  it('el registrado se queda con el historial y los datos que le faltaban, sin pisar lo suyo', () => {
+    const db: Db = { animales: {
+      'PEND-Mora': { ...vaca('leche', [{ id: 'p1', tipo: 'pesaje', fecha: '2026-10-01', nota: '', am: 8 }, { id: 'c1', tipo: 'celo', fecha: '2026-09-01', nota: '' }]), arete: 'PEND-Mora', nombre: 'Mora', raza: 'Jersey', finca: 'Norte' },
+      '188000000001': { ...vaca('leche', [{ id: 'c1', tipo: 'celo', fecha: '2026-09-01', nota: '' }]), arete: '188000000001', finca: 'Sur', categoria: 'Ternera' },
+    } };
+    juntar(db, 'PEND-Mora', '188000000001');
+    expect(Object.keys(db.animales)).toEqual(['188000000001']);
+    expect(db.animales['188000000001']).toMatchObject({ nombre: 'Mora', raza: 'Jersey', finca: 'Sur', categoria: 'Ternera' });
+    expect(db.animales['188000000001'].eventos.map(e => e.id).sort()).toEqual(['c1', 'p1']);
   });
 });

@@ -237,6 +237,22 @@ export function cambiosDesde(db: Db, desde: string): Db {
 
 // Campos de texto que pueden estar vacíos (tipo y sexo siempre tienen valor: no se sabe si se eligieron).
 const LLENABLES = ['nombre', 'nac', 'finca', 'raza', 'categoria', 'notas'] as const;
+// Suma a "loc" lo de "a" (el mismo animal visto en otra parte): los eventos que falten y los datos que aquí estén vacíos.
+// Lo ya escrito no se pisa. Si llegó un traslado nuevo, la finca pasa a la del más reciente. Devuelve cuántos eventos sumó.
+function sumarAnimal(loc: Animal, a: Animal) {
+  for (const k of LLENABLES) if (!loc[k] && a[k]) loc[k] = a[k];
+  const ids = new Set(loc.eventos.map(x => x.id)), nuevos = a.eventos.filter(ev => !ids.has(ev.id));
+  loc.eventos.push(...nuevos);
+  if (nuevos.some(ev => ev.tipo === 'traslado')) loc.finca = fincaPorTraslados(loc) ?? loc.finca;
+  return nuevos.length;
+}
+
+// Un arete provisional que resultó ser uno ya registrado (por ejemplo, el que llegó de SENASA): el registrado se queda con todo.
+export function juntar(db: Db, provisional: string, registrado: string) {
+  sumarAnimal(db.animales[registrado], db.animales[provisional]);
+  delete db.animales[provisional];
+}
+
 // Fusiona sin borrar: animales nuevos se agregan, eventos se unen por id. Los datos locales del animal ganan.
 // shortcut: un evento borrado reaparece si otro respaldo aún lo tiene; añadir "borrados" si estorba.
 export function fusionar(dst: Db, src: unknown) {
@@ -253,13 +269,7 @@ export function fusionar(dst: Db, src: unknown) {
   for (const a of limpios) {
     const loc = Object.hasOwn(dst.animales, a.arete) ? dst.animales[a.arete] : undefined;
     if (!loc) { dst.animales[a.arete] = a; n.animales++; n.eventos += a.eventos.length; continue }
-    // Lo que aquí está vacío se completa con la copia (un nombre puesto en otro teléfono); lo ya escrito no se pisa.
-    for (const k of LLENABLES) if (!loc[k] && a[k]) loc[k] = a[k];
-    const ids = new Set(loc.eventos.map(x => x.id));
-    let traslado = false;
-    for (const ev of a.eventos) if (!ids.has(ev.id)) { loc.eventos.push(ev); n.eventos++; traslado ||= ev.tipo === 'traslado' }
-    // Un traslado nuevo anotado en otro teléfono también cambia la finca aquí. Sin traslado nuevo, se respeta la finca de este teléfono.
-    if (traslado) loc.finca = fincaPorTraslados(loc) ?? loc.finca;
+    n.eventos += sumarAnimal(loc, a);
   }
   return n;
 }

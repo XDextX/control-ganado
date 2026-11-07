@@ -116,6 +116,8 @@ No hay servidor: los datos se pasan por **copia de seguridad** (archivo `.txt` c
 
 `cambiosDesde(db, fecha)` arma "lo anotado desde un día" para el QR: eventos cuyo `id` dice que se anotaron ese día o después, más los animales con `creado` en ese periodo, sin campos vacíos para que quepa.
 
+`juntar(db, provisional, registrado)` aplica la misma suma a un animal con arete provisional que resultó ser uno ya registrado, y borra el provisional. Solo en este teléfono: los otros siguen teniendo el provisional hasta que se corrija allí.
+
 Límites conocidos: un evento borrado vuelve si se importa una copia vieja (no hay registro de borrados), y los cambios de datos de un animal existente solo viajan en la copia completa… y aun así solo llenan lo que en el otro teléfono estaba vacío: un nombre **cambiado** (no vacío) no viaja.
 
 ## Funcionar sin conexión (`public/sw.js`)

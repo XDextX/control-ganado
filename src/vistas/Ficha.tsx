@@ -1,16 +1,31 @@
 import { h } from '../jsx';
-import { Animal, CAMPOS, CATEGORIAS, areteValido, esRepeticion, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, hoy, kilos, nuevoId, ordenados, pesajeDe, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
+import { Animal, CAMPOS, CATEGORIAS, areteValido, esRepeticion, juntar, nombreA, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, hoy, kilos, nuevoId, ordenados, pesajeDe, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
 import { abrir, est, guardarYAvisar, ir, mostrarReporte, render, volver } from '../estado';
 import { EliminarAnimal } from '../componentes/EliminarDatos';
 import { NombreYArete } from '../componentes/Arete';
 
 function Formulario({ a }: { a: Animal | null }) {
+  let pregunta!: HTMLElement;
+  // El arete ya existe: en vez de solo negarse, ofrece juntar este animal con el registrado (sin ventanita del navegador).
+  const ofrecerJuntar = (a: Animal, otro: Animal, aplicarFormulario: () => void) => pregunta.replaceChildren(
+    <div class="card warn" role="alert">
+      <p><b>El arete {otro.arete} ya está registrado:</b> {[otro.nombre || 'sin nombre', otro.finca || 'sin finca', otro.categoria].filter(Boolean).join(' · ')}.</p>
+      <p>Si es el mismo animal, se juntan: queda con el arete {otro.arete}, recibe todo el historial de {nombreA(a)} y se llenan los datos que tenga vacíos.</p>
+      <button type="button" class="pri grande" onClick={() => {
+        aplicarFormulario(); juntar(est.db, a.arete, otro.arete);
+        guardarYAvisar('🔗 Animales juntados'); abrir(otro.arete);
+      }}>🔗 Sí, es el mismo animal: juntarlos</button>
+      <button type="button" class="grande" onClick={() => pregunta.replaceChildren()}>✋ No, voy a revisar el número</button>
+    </div>);
   const guardarAnimal = (e: Event) => {
     e.preventDefault();
     const { db } = est, f = e.target as HTMLFormElement, val = (k: string) => (f.elements.namedItem(k) as HTMLInputElement).value.trim();
     const arete = val('arete');
     if (!areteValido(arete)) return alert('Ese número de arete no es válido. Use hasta 40 letras o números.');
-    if (arete !== a?.arete && db.animales[arete]) return alert('Ya existe un animal con el arete ' + arete);
+    if (arete !== a?.arete && Object.hasOwn(db.animales, arete)) {
+      if (!a) return alert('Ya existe un animal con el arete ' + arete);
+      return ofrecerJuntar(a, db.animales[arete], () => { for (const k of CAMPOS) if (k !== 'arete') (a as any)[k] = val(k) });
+    }
     const nuevo = a ?? ({ eventos: [] } as unknown as Animal);
     if (a && arete !== a.arete) delete db.animales[a.arete];
     for (const k of CAMPOS) (nuevo as any)[k] = val(k);
@@ -45,6 +60,7 @@ function Formulario({ a }: { a: Animal | null }) {
         <label for="f-notas">Notas</label>
         <textarea id="f-notas" name="notas" maxlength="1000" rows="2" value={a?.notas ?? est.nuevo.notas ?? ''}></textarea>
       </details>
+      <div ref={(el: HTMLElement) => (pregunta = el)}></div>
       <button class="pri grande">💾 Guardar animal</button>
     </form>
   );
