@@ -37,7 +37,7 @@ export function VerReporte() {
     <section>
       <button onClick={() => { verFoto = false; render() }}>← Volver al reporte</button>
       <h2>👁️ Así se verá la foto</h2>
-      <p class="ayuda">Esta es la imagen exacta que se enviará. Si un texto no cabe, termina en “…”.</p>
+      <p class="ayuda">Esta es la imagen exacta que se enviará. Si un texto no cabe a lo ancho, sigue en el renglón de abajo.</p>
       <img class="foto-reporte" alt={'Foto del reporte: ' + r.titulo} src={reporteAImagen(r).toDataURL('image/png')} />
       <button class="pri grande" onClick={enviarFoto}>📲 Enviar esta foto (por mensaje)</button>
       <button class="grande" onClick={() => { verFoto = false; render() }}>← Volver al reporte</button>

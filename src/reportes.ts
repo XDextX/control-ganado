@@ -5,6 +5,13 @@ export interface Seccion { titulo: string; nota: string; cols: string[]; filas: 
 export interface Reporte { titulo: string; sub: string; secciones: Seccion[] }
 export type TipoReporte = 'inventario' | 'partos' | 'salidas' | 'traslados' | 'pesajes' | 'ficha';
 
+// En los reportes, como en el campo, basta con los últimos 4 dígitos del arete oficial; el nombre va primero, como en la app.
+// Si otro animal termina en los mismos 4 dígitos, se muestra completo para no confundirlos.
+const animalCorto = (a: Animal, db: Db) => {
+  const fin = a.arete.slice(-4), corto = /^\d{5,}$/.test(a.arete) && !Object.values(db.animales).some(o => o !== a && o.arete.endsWith(fin));
+  const arete = corto ? fin : a.arete.startsWith('PEND-') ? 'sin arete' : a.arete; // PEND-: arete provisional, todavía sin el oficial
+  return a.nombre ? `${a.nombre} · ${arete}` : arete;
+};
 const activos = (db: Db) => Object.values(db.animales).filter(a => !retiro(a)).sort(porArete);
 const contar = (lista: Animal[]) => {
   const c: Record<string, number> = {};
@@ -20,7 +27,7 @@ export function inventario(db: Db): Reporte {
     titulo: 'Animales por finca', sub: `${cuantos(total, 'animal activo', 'animales activos')} · ${fmt(hoy())}`,
     secciones: Object.keys(porFinca).sort().map(f => ({
       titulo: `${f} — ${cuantos(porFinca[f].length, 'animal', 'animales')}`, nota: contar(porFinca[f]),
-      cols: ['Arete', 'Categoría', 'Raza', 'Edad'], filas: porFinca[f].map(a => [nombreA(a), a.categoria, a.raza, edad(a.nac)]),
+      cols: ['Animal', 'Categoría', 'Raza', 'Edad'], filas: porFinca[f].map(a => [animalCorto(a, db), a.categoria, a.raza, edad(a.nac)]),
     })),
   };
 }
@@ -29,7 +36,7 @@ export function partos(db: Db): Reporte {
   const filas = activos(db).map(a => ({ a, p: prenezAbierta(a) })).filter(x => x.p).sort((x, y) => x.p!.parto.localeCompare(y.p!.parto))
     .map(({ a, p }) => {
       const d = diasHasta(p!.parto);
-      return [nombreA(a), a.finca, fmt(p!.parto), p!.secado ? fmt(p!.secado) : '—', d < 0 ? `Pasó hace ${-d} días` : `Faltan ${d} días`];
+      return [animalCorto(a, db), a.finca, fmt(p!.parto), p!.secado ? fmt(p!.secado) : '—', d < 0 ? `Pasó hace ${-d} días` : `Faltan ${d} días`];
     });
   return {
     titulo: 'Próximos partos y secados', sub: `${cuantos(filas.length, 'vaca preñada', 'vacas preñadas')} · ${fmt(hoy())}`,
@@ -61,7 +68,7 @@ export function pesajes(db: Db, fecha: string): Reporte {
         cols: ['Vaca', 'Mañana', 'Tarde', 'Total', 'Cambio'],
         filas: xs.map(({ a, p }) => {
           const ant = anterior(a), dif = ant ? totalPesaje(p!) - totalPesaje(ant) : null;
-          return [nombreA(a), kilos(p!.am ?? 0), kilos(p!.pm ?? 0), kilos(totalPesaje(p!)), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
+          return [animalCorto(a, db), kilos(p!.am ?? 0), kilos(p!.pm ?? 0), kilos(totalPesaje(p!)), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
         }),
       };
     }),
@@ -78,7 +85,7 @@ export function traslados(db: Db, mes: string): Reporte {
     titulo: 'Traslados de ' + nombreDelMes(mes), sub: cuantos(movs.length, 'animal trasladado', 'animales trasladados'),
     secciones: [{
       titulo: '', nota: movs.length ? Object.entries(rutas).map(([r, n]) => `${n} de ${r}`).join(' · ') : 'No se trasladó ningún animal este mes.',
-      cols: ['Fecha', 'Animal', 'De', 'A', 'Nota'], filas: movs.map(({ a, e }) => [fmt(e.fecha), nombreA(a), e.desde || '—', e.hacia ?? '', e.nota]),
+      cols: ['Fecha', 'Animal', 'De', 'A', 'Nota'], filas: movs.map(({ a, e }) => [fmt(e.fecha), animalCorto(a, db), e.desde || '—', e.hacia ?? '', e.nota]),
     }],
   };
 }
@@ -91,7 +98,7 @@ export function salidas(db: Db, mes: string): Reporte {
     titulo: 'Salidas de ' + nombreMes, sub: `${sal.length === 1 ? '1 animal salió' : sal.length + ' animales salieron'}`,
     secciones: [{
       titulo: '', nota: sal.length ? MOTIVOS.map(m => `${sal.filter(x => x.r.motivo === m).length} ${m}`).join(' · ') : 'Ningún animal salió este mes.',
-      cols: ['Fecha', 'Animal', 'Finca', 'Motivo', 'Nota'], filas: sal.map(({ a, r }) => [fmt(r.fecha), nombreA(a), a.finca, r.motivo ?? '', r.nota]),
+      cols: ['Fecha', 'Animal', 'Finca', 'Motivo', 'Nota'], filas: sal.map(({ a, r }) => [fmt(r.fecha), animalCorto(a, db), a.finca, r.motivo ?? '', r.nota]),
     }],
   };
 }
@@ -114,12 +121,28 @@ export function ficha(a: Animal): Reporte {
 
 // Dibuja el reporte como imagen. Columnas con ancho según su texto; las de la derecha se recortan con "…" si no caben.
 export function reporteAImagen(r: Reporte): HTMLCanvasElement {
-  const W = 1080, P = 48, LH = 46, c = document.createElement('canvas'), x = c.getContext('2d')!;
+  const W = 1080, P = 48, LH = 46, RENGLON = 38, c = document.createElement('canvas'), x = c.getContext('2d')!;
   const F = (peso: number, tam: number) => `${peso} ${tam}px system-ui, sans-serif`;
   const corta = (t: string, max: number) => {
     if (x.measureText(t).width <= max) return t;
     while (t && x.measureText(t + '…').width > max) t = t.slice(0, -1);
     return t + '…';
+  };
+  // Parte el texto en renglones que quepan en "max", sin cortar datos: una palabra muy larga (un arete) se parte por letras.
+  const partir = (t: string, max: number) => {
+    const renglones: string[] = [];
+    let r = '';
+    for (const palabra of t.split(' ')) {
+      const prueba = r ? r + ' ' + palabra : palabra;
+      if (x.measureText(prueba).width <= max) { r = prueba; continue }
+      if (r) renglones.push(r);
+      r = '';
+      for (const letra of palabra) {
+        if (r && x.measureText(r + letra).width > max) { renglones.push(r); r = '' }
+        r += letra;
+      }
+    }
+    return [...renglones, r];
   };
   const pasos: (() => void)[] = []; // primero se mide la altura total, luego se dibuja
   pasos.push(() => {
@@ -133,25 +156,42 @@ export function reporteAImagen(r: Reporte): HTMLCanvasElement {
   secciones: for (const [si, s] of r.secciones.entries()) {
     if (y > MAX_ALTO - 300) { faltan += r.secciones.slice(si).reduce((n, x) => n + x.filas.length, 0); break }
     if (s.titulo) { const yy = y; pasos.push(() => { x.fillStyle = '#2f6f3e'; x.font = F(700, 38); x.fillText(corta(s.titulo, W - 2 * P), P, yy) }); y += 56 }
-    if (s.nota) { const yy = y; pasos.push(() => { x.fillStyle = '#333'; x.font = F(400, 30); x.fillText(corta(s.nota, W - 2 * P), P, yy) }); y += 50 }
+    if (s.nota) {
+      x.font = F(400, 30);
+      const renglones = partir(s.nota, W - 2 * P), yy = y;
+      pasos.push(() => { x.fillStyle = '#333'; x.font = F(400, 30); renglones.forEach((t, j) => x.fillText(t, P, yy + j * RENGLON)) });
+      y += renglones.length * RENGLON + 12;
+    }
     if (!s.filas.length) continue;
     x.font = F(400, 30);
     const filas = s.cols.length ? [s.cols, ...s.filas] : s.filas;
     const n = filas[0].length, anchos = Array.from({ length: n }, (_, i) => Math.max(...filas.map(f => x.measureText(f[i] ?? '').width)) + 28);
-    let sobra = W - 2 * P - anchos.reduce((a, b) => a + b, 0);
-    for (let i = n - 1; sobra < 0 && i > 0; i--) { const quita = Math.min(-sobra, anchos[i] - 120); if (quita > 0) { anchos[i] -= quita; sobra += quita } }
+    // Si no caben: cada columna tiene al menos el ancho de su palabra más larga (un arete no se parte),
+    // y lo que sobra se reparte según cuánto le falta a cada una para verse en un solo renglón.
+    const total = anchos.reduce((a, b) => a + b, 0);
+    if (total > W - 2 * P) {
+      const minimos = anchos.map((_, i) => Math.max(...filas.flatMap(f => (f[i] ?? '').split(' ').map(p => x.measureText(p).width))) + 28);
+      const sumaMin = minimos.reduce((a, b) => a + b, 0), extra = Math.max(0, W - 2 * P - sumaMin), pide = total - sumaMin;
+      anchos.forEach((w, i) => { anchos[i] = sumaMin > W - 2 * P ? (W - 2 * P) / n : minimos[i] + extra * (w - minimos[i]) / pide });
+    }
     for (const [k, f] of filas.entries()) {
       if (y > MAX_ALTO - 150) {
         faltan += filas.length - k + r.secciones.slice(si + 1).reduce((n, x) => n + x.filas.length, 0);
         break secciones;
       }
-      const yy = y, cab = s.cols.length > 0 && k === 0;
+      const yy = y, cab = s.cols.length > 0 && k === 0, negrita = (i: number) => cab || (!s.cols.length && i === 0);
+      const celdas = f.map((t, i) => { x.font = F(negrita(i) ? 700 : 400, 30); return partir(t ?? '', anchos[i] - 20) });
+      const alto = LH + (Math.max(...celdas.map(c => c.length)) - 1) * RENGLON;
       pasos.push(() => {
-        if (k % 2 === (s.cols.length ? 1 : 0)) { x.fillStyle = '#eef6ef'; x.fillRect(P - 10, yy - 34, W - 2 * P + 20, LH) }
+        if (k % 2 === (s.cols.length ? 1 : 0)) { x.fillStyle = '#eef6ef'; x.fillRect(P - 10, yy - 34, W - 2 * P + 20, alto) }
         let xx = P;
-        f.forEach((t, i) => { x.fillStyle = '#111'; x.font = F(cab || (!s.cols.length && i === 0) ? 700 : 400, 30); x.fillText(corta(t ?? '', anchos[i] - 20), xx, yy); xx += anchos[i] });
+        celdas.forEach((renglones, i) => {
+          x.fillStyle = '#111'; x.font = F(negrita(i) ? 700 : 400, 30);
+          renglones.forEach((t, j) => x.fillText(t, xx, yy + j * RENGLON));
+          xx += anchos[i];
+        });
       });
-      y += LH;
+      y += alto;
     }
     y += 30;
   }
