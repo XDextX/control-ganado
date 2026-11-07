@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ficha, inventario, partos, pesajes, salidas, traslados } from './reportes';
-import { Animal, Db, KEY, alertas, concentrado, juntar, cargar, datosDeEjemplo, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
+import { Animal, Db, KEY, alertas, concentrado, juntar, cargar, datosDeEjemplo, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, problemaAlCargar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
@@ -209,8 +209,7 @@ describe('revisión 2026-10-30', () => {
   const guardado = (crudo: string) => {
     const m = new Map([[KEY, crudo]]);
     vi.stubGlobal('localStorage', { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => m.set(k, v) });
-    const alerta = vi.fn(); vi.stubGlobal('alert', alerta);
-    return { m, alerta };
+    return { m };
   };
   afterEach(() => vi.unstubAllGlobals());
 
@@ -219,20 +218,29 @@ describe('revisión 2026-10-30', () => {
       A: { arete: 'A', eventos: [{ id: '1', tipo: 'celo', fecha: '2026-01-01' }, { tipo: 'celo' }], notas: 'x'.repeat(1500) },
       B: { arete: 'B' },
     } });
-    const { m, alerta } = guardado(crudo);
+    const { m } = guardado(crudo);
     const db = cargar();
     expect(Object.keys(db.animales)).toEqual(['A']);
     expect([...m.entries()].find(([k]) => k.startsWith(KEY + '.danado-'))?.[1]).toBe(crudo);
-    expect(alerta).toHaveBeenCalledOnce();
+    expect(problemaAlCargar).toMatch(/datos dañados/);
     // No se repite en cada apertura: lo limpio ya quedó guardado.
     cargar();
-    expect(alerta).toHaveBeenCalledOnce();
+    expect(problemaAlCargar).toBe('');
   });
   it('al cargar datos sanos no se rescata ni se avisa nada', () => {
-    const { m, alerta } = guardado(JSON.stringify({ animales: { A: { ...vaca('leche', [{ id: '1', tipo: 'celo', fecha: '2026-01-01', nota: '' }]), arete: 'A' } } }));
+    const { m } = guardado(JSON.stringify({ animales: { A: { ...vaca('leche', [{ id: '1', tipo: 'celo', fecha: '2026-01-01', nota: '' }]), arete: 'A' } } }));
     cargar();
     expect(m.size).toBe(1);
-    expect(alerta).not.toHaveBeenCalled();
+    expect(problemaAlCargar).toBe('');
+  });
+  it('al cargar datos ilegibles se rescatan y se avisa; el aviso no queda para la próxima carga', () => {
+    const { m } = guardado('{esto no es una copia');
+    expect(cargar()).toEqual({ animales: {} });
+    expect([...m.entries()].find(([k]) => k.startsWith(KEY + '.danado-'))?.[1]).toBe('{esto no es una copia');
+    expect(problemaAlCargar).toMatch(/No se pudieron leer los datos guardados/);
+    m.set(KEY, JSON.stringify({ animales: {} }));
+    cargar();
+    expect(problemaAlCargar).toBe('');
   });
   it('guardar dice si de verdad se guardó', () => {
     vi.stubGlobal('localStorage', { setItem: () => { throw new Error('lleno') } });

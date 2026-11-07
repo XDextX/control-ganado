@@ -1,6 +1,6 @@
 // Estado compartido de la app y navegación entre pantallas. Todo componente lee y cambia `est` y luego llama render().
 import { h } from './jsx';
-import { Animal, KEY, cargar, datosDeEjemplo, guardar, hoy } from './datos';
+import { Animal, KEY, cargar, datosDeEjemplo, guardar, hoy, olvidarProblemaAlCargar, problemaAlCargar } from './datos';
 import { TipoReporte } from './reportes';
 import type { Destino, Rango, Resultado } from './senasa';
 import { detenerCamara } from './qr';
@@ -29,7 +29,11 @@ export const est = {
   planilla: { finca: '', fecha: '', elegidaEl: '' }, // hoja de pesaje; elegidaEl: día en que se eligió la fecha (la app puede quedar abierta varios días)
 };
 
-export function verEjemplo(si: boolean) { est.ejemplo = si; est.db = si ? datosDeEjemplo() : cargar(); volver() }
+export function verEjemplo(si: boolean) { est.ejemplo = si; est.db = si ? datosDeEjemplo() : cargar(); volver(); avisarProblemaAlCargar() }
+// Datos dañados al abrir la app: aviso rojo en pantalla, una sola vez.
+export function avisarProblemaAlCargar() {
+  if (problemaAlCargar) { avisarError(problemaAlCargar); olvidarProblemaAlCargar() }
+}
 
 // main.tsx registra cómo se pinta la app (así las pantallas no se importan entre sí en círculo).
 let pintor = () => {};
@@ -144,6 +148,17 @@ export function avisarError(texto: string, { guardado = false, foco = !guardado 
   // Con foco (por ejemplo, un archivo que no se pudo leer) la página sube hasta el aviso. El de guardado no se lleva el foco:
   // se anuncia igual (role="alert") y no hace saltar la página mientras se anota.
   if (foco) caja.querySelector('button')!.focus();
+}
+// Error de un campo: debajo de ese campo, anunciado, y con el foco en el campo para corregirlo. Se borra al escribir.
+export function errorCampo(campo: HTMLElement, texto: string) {
+  const id = campo.id + '-error';
+  let p = document.getElementById(id);
+  if (!p) {
+    p = <p id={id} class="error-campo" role="alert" /> as HTMLElement;
+    campo.after(p); campo.setAttribute('aria-describedby', id);
+    campo.addEventListener('input', () => { p!.textContent = '' });
+  }
+  p.textContent = texto; campo.focus();
 }
 // Quita avisos rojos: los de otros errores (al cambiar de pantalla o leer bien un archivo), el de guardado, o todos.
 // Si el aviso tenía el foco, el foco pasa a la pantalla en vez de perderse en <body>.

@@ -34,7 +34,12 @@ export function CopiaSeguridad() {
         : `${que} no es una copia de esta app (${(err as Error).message}).`);
     }
     // Recuperar no cuenta como respaldo: lo juntado no está en ninguna otra parte.
-    if (!guardarYAvisar()) { est.db = JSON.parse(antes); return volver() }
+    const yaFallaba = !!document.querySelector('.aviso-mal[data-guardado]'); // de antes: ese sí avisa de algo sin guardar
+    if (!guardarYAvisar()) {
+      // Todo volvió a como estaba: no se perdió nada, así que no se asusta con «no se guardó lo último».
+      est.db = JSON.parse(antes); volver(); if (!yaFallaba) quitarError('guardado');
+      return avisarError('No se pudo guardar la copia: no se agregó nada; todo quedó como estaba.');
+    }
     volver();
     avisar(`✅ Copia recuperada: ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}. No se borró nada.${n.descartados ? (n.descartados === 1 ? ' Se ignoró 1 dato dañado.' : ` Se ignoraron ${n.descartados} datos dañados.`) : ''}`, 7000);
   };
