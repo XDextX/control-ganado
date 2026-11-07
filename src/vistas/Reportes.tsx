@@ -48,15 +48,18 @@ export function VerReporte() {
     <section>
       <div class="noprint">
         <button onClick={() => ir(est.anterior)}>← Volver</button>
-        {(est.repTipo === 'salidas' || est.repTipo === 'traslados') && <div><label>Mes</label>
-          <input type="month" value={est.mes} onChange={(e: Event) => { est.mes = (e.target as HTMLInputElement).value || hoy().slice(0, 7); render() }} /></div>}
-        {est.repTipo === 'pesajes' && fechasDePesaje(est.db).length > 0 && <div><label>Fecha del pesaje</label>
-          <select value={est.fechaPesaje || fechasDePesaje(est.db)[0]} onChange={(e: Event) => { est.fechaPesaje = (e.target as HTMLSelectElement).value; render() }}>
-            {fechasDePesaje(est.db).map(f => <option value={f}>{fmt(f)}</option>)}
-          </select></div>}
       </div>
       <div id="reporte" class="card">
-        <h2>{r.titulo}</h2><p class="mut">{r.sub}</p>
+        <h2>{r.titulo}</h2>
+        {/* El mes o la fecha se eligen junto al resumen, dentro del reporte; al imprimir no salen */}
+        <div class="rep-sub"><p class="mut">{r.sub}</p>
+          {(est.repTipo === 'salidas' || est.repTipo === 'traslados') && <label class="noprint">Mes
+            <input type="month" value={est.mes} onChange={(e: Event) => { est.mes = (e.target as HTMLInputElement).value || hoy().slice(0, 7); render() }} /></label>}
+          {est.repTipo === 'pesajes' && fechasDePesaje(est.db).length > 0 && <label class="noprint">Fecha
+            <select value={est.fechaPesaje || fechasDePesaje(est.db)[0]} onChange={(e: Event) => { est.fechaPesaje = (e.target as HTMLSelectElement).value; render() }}>
+              {fechasDePesaje(est.db).map(f => <option value={f}>{fmt(f)}</option>)}
+            </select></label>}
+        </div>
         {r.secciones.map(s => <>
           {s.titulo && <h3>{s.titulo}</h3>}
           {s.nota && <p>{s.nota}</p>}
