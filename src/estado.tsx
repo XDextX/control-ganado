@@ -1,10 +1,13 @@
 // Estado compartido de la app y navegación entre pantallas. Todo componente lee y cambia `est` y luego llama render().
 import { h } from './jsx';
-import { Animal, cargar, datosDeEjemplo, guardar, hoy } from './datos';
+import { Animal, KEY, cargar, datosDeEjemplo, guardar, hoy } from './datos';
 import { TipoReporte } from './reportes';
 import { detenerCamara } from './qr';
 
-export type Vista = 'lista' | 'reportes' | 'reporte' | 'animal' | 'qr' | 'escaner' | 'cambios' | 'mover' | 'pesaje';
+const REPORTES: TipoReporte[] = ['inventario', 'partos', 'salidas', 'traslados', 'pesajes', 'ficha'];
+
+const VISTAS = ['lista', 'reportes', 'reporte', 'animal', 'qr', 'escaner', 'cambios', 'mover', 'pesaje'] as const;
+export type Vista = typeof VISTAS[number];
 
 export const est = {
   db: cargar(),
@@ -21,6 +24,7 @@ export const est = {
   criaDe: '', // arete de la madre recién parida: ofrece agregar la cría
   fechaPesaje: '', // día que muestra el reporte de pesajes ('' = el último)
   cambiosDias: 0, // 0 = hoy, 1 = desde ayer, 6 = últimos 7 días
+  planilla: { finca: '', fecha: '', elegidaEl: '' }, // hoja de pesaje; elegidaEl: día en que se eligió la fecha (la app puede quedar abierta varios días)
 };
 
 export function verEjemplo(si: boolean) { est.ejemplo = si; est.db = si ? datosDeEjemplo() : cargar(); volver() }
@@ -28,7 +32,34 @@ export function verEjemplo(si: boolean) { est.ejemplo = si; est.db = si ? datosD
 // main.tsx registra cómo se pinta la app (así las pantallas no se importan entre sí en círculo).
 let pintor = () => {};
 export const alPintar = (f: () => void) => { pintor = f };
-export const render = () => pintor();
+export const render = () => { pintor(); recordarPantalla() };
+
+// Al recargar, volver a la misma pantalla. Se guarda por pestaña (sessionStorage): abrir la app de nuevo empieza en la lista.
+const PANTALLA = KEY + '.pantalla';
+function recordarPantalla() {
+  const { vista, anterior, repTipo, mes, fechaPesaje, qrModo, planilla, ejemplo } = est;
+  try { sessionStorage.setItem(PANTALLA, JSON.stringify({ vista, anterior, repTipo, mes, fechaPesaje, qrModo, planilla, ejemplo, arete: est.actual?.arete ?? null })) } catch { /* sin almacenamiento: empieza en la lista */ }
+}
+export function restaurarPantalla() {
+  let p: any;
+  try { p = JSON.parse(sessionStorage.getItem(PANTALLA) ?? 'null') } catch { return }
+  // Lo guardado es de esta pestaña, pero puede venir de otra versión de la app: todo se comprueba antes de usarlo.
+  const vista = (v: unknown): v is Vista => VISTAS.includes(v as Vista) && v !== 'escaner'; // la cámara no se enciende sola
+  const texto = (v: unknown) => typeof v === 'string' ? v : '';
+  const dia = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; // una fecha mal escrita guardaría pesajes que luego se descartan
+  if (!p || p.ejemplo || !vista(p.vista)) return; // el ejemplo no se guarda: al recargar se sale de él
+  const actual = Object.hasOwn(est.db.animales, texto(p.arete)) ? est.db.animales[p.arete] : null;
+  if (p.arete && !actual) return; // el animal ya no existe
+  const repTipo = REPORTES.includes(p.repTipo) ? p.repTipo : est.repTipo;
+  if (!actual && (p.vista === 'qr' || (p.vista === 'reporte' && repTipo === 'ficha'))) return; // pantallas que necesitan un animal
+  const pl = p.planilla ?? {};
+  Object.assign(est, {
+    vista: p.vista, anterior: vista(p.anterior) ? p.anterior : 'lista', repTipo, actual,
+    mes: /^\d{4}-\d{2}$/.test(p.mes) ? p.mes : est.mes, fechaPesaje: texto(p.fechaPesaje), qrModo: p.qrModo === 'corral' ? 'corral' : 'animal',
+    planilla: { finca: texto(pl.finca), fecha: dia(pl.fecha), elegidaEl: dia(pl.fecha) && dia(pl.elegidaEl) },
+  });
+  if (est.vista !== 'lista' && !history.state?.app) history.pushState({ app: 1 }, '');
+}
 
 export function ir(v: Vista) {
   detenerCamara(); if (v !== est.vista) est.anterior = est.vista; est.vista = v; render(); scrollTo(0, 0);

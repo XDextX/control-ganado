@@ -6,15 +6,15 @@ import { NombreYArete } from '../componentes/Arete';
 
 const borradores = new Map<string, string>(); // lo escrito y sin guardar, por día, vaca y ordeño: sobrevive a cambiar de finca, de fecha o de pantalla
 const clave = (dia: string, arete: string, ordeno: string) => `${dia}|${arete}|${ordeno}`;
-let finca = '', fecha = '', elegidaEl = ''; // elegidaEl: día en que se eligió la fecha (la app puede quedar abierta varios días)
 
 // Fincas que tienen vacas de leche para pesar.
 const fincasDeLeche = () => fincas(est.db).filter(f => vacasDeLeche(est.db, f).length);
 
 export function Pesaje() {
-  const lista = fincasDeLeche();
-  if (!lista.includes(finca)) finca = lista[0] ?? '';
-  if (elegidaEl !== hoy()) { fecha = hoy(); elegidaEl = hoy() }
+  const pl = est.planilla, lista = fincasDeLeche();
+  if (!lista.includes(pl.finca)) pl.finca = lista[0] ?? '';
+  if (pl.elegidaEl !== hoy()) { pl.fecha = hoy(); pl.elegidaEl = hoy() }
+  const { finca, fecha } = pl;
   const vacas = vacasDeLeche(est.db, finca);
   const filas: { arete: string; am: HTMLInputElement; pm: HTMLInputElement; total: HTMLElement; antes?: Evento }[] = [];
   let resumen!: HTMLElement;
@@ -61,11 +61,11 @@ export function Pesaje() {
       {otrosDias.length > 0 && <p class="card warn">⚠️ Tiene kilos escritos sin guardar en otra finca o fecha ({otrosDias.map(d => fmt(d)).join(', ')}). Vuelva a esa hoja y toque Guardar.</p>}
       {!lista.length ? <p>No hay vacas de leche registradas. Para pesarlas, en su ficha el <b>Tipo</b> debe ser “Leche” y la categoría “Vaca”.</p> : <>
         <label for="p-finca">Finca</label>
-        <select id="p-finca" value={finca} onChange={(e: Event) => { finca = (e.target as HTMLSelectElement).value; render() }}>
+        <select id="p-finca" value={finca} onChange={(e: Event) => { pl.finca = (e.target as HTMLSelectElement).value; render() }}>
           {lista.map(f => <option>{f}</option>)}
         </select>
         <label for="p-fecha">Fecha del pesaje</label>
-        <input id="p-fecha" type="date" value={fecha} onChange={(e: Event) => { fecha = (e.target as HTMLInputElement).value || hoy(); render() }} />
+        <input id="p-fecha" type="date" value={fecha} onChange={(e: Event) => { pl.fecha = (e.target as HTMLInputElement).value || hoy(); render() }} />
         <p class="ayuda">Anote los kilos de cada ordeño. Deje en blanco la vaca que no se pesó. Si ya había pesaje ese día, aquí aparece para corregirlo.</p>
         {vacas.map(({ a, seca }) => {
           const p = pesajeDe(a, fecha), antes = pesajeAnterior(a, fecha);
