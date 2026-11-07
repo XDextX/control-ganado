@@ -1,6 +1,6 @@
 // Planilla del día de pesaje: todas las vacas de leche de una finca, con mañana y tarde en kilos.
 import { h, Fragment } from '../jsx';
-import { Evento, MAX_KILOS, cuantos, esRaro, fincas, fmt, guardarPesajes, hoy, kilos, leerKilos, pesajeAnterior, pesajeDe, totalPesaje, vacasDeLeche } from '../datos';
+import { Evento, LECHE_POR_KG_CONCENTRADO, MAX_KILOS, concentrado, cuantos, esRaro, fincas, fmt, guardarPesajes, hoy, kilos, leerKilos, pesajeAnterior, pesajeDe, totalPesaje, vacasDeLeche } from '../datos';
 import { est, guardarYAvisar, mostrarReporte, render, volver } from '../estado';
 import { NombreYArete } from '../componentes/Arete';
 
@@ -21,7 +21,7 @@ export function Pesaje() {
 
   const valor = (i: HTMLInputElement) => { const n = leerKilos(i.value); i.classList.toggle('malo', Number.isNaN(n)); return n };
   const recalcular = () => {
-    let suma = 0, pesadas = 0, raros = 0;
+    let suma = 0, conc = 0, pesadas = 0, raros = 0;
     for (const f of filas) {
       const am = valor(f.am), pm = valor(f.pm);
       for (const [i, n, antes] of [[f.am, am, f.antes?.am], [f.pm, pm, f.antes?.pm]] as const) {
@@ -29,10 +29,10 @@ export function Pesaje() {
         i.classList.toggle('raro', raro); raros += +raro;
       }
       const t = (Number.isNaN(am) ? 0 : am ?? 0) + (Number.isNaN(pm) ? 0 : pm ?? 0);
-      f.total.textContent = am === undefined && pm === undefined ? '' : '= ' + kilos(t);
-      if (t) { suma += t; pesadas++ }
+      f.total.textContent = am === undefined && pm === undefined ? '' : `= ${kilos(t)} · 🌾 ${kilos(concentrado(t))} de concentrado`;
+      if (t) { suma += t; conc += concentrado(t); pesadas++ }
     }
-    resumen.textContent = (pesadas ? `${cuantos(pesadas, 'vaca pesada', 'vacas pesadas')} · total ${kilos(suma)}` : 'Todavía no hay pesos anotados.')
+    resumen.textContent = (pesadas ? `${cuantos(pesadas, 'vaca pesada', 'vacas pesadas')} · total ${kilos(suma)} · 🌾 concentrado ${kilos(conc)}` : 'Todavía no hay pesos anotados.')
       + (raros ? ` · ⚠️ ${cuantos(raros, 'número muy distinto', 'números muy distintos')} a la vez pasada (en amarillo): revíselos` : '');
   };
   // La tecla "Siguiente" del teclado pasa al próximo cuadro (mañana → tarde → siguiente vaca).
@@ -66,7 +66,7 @@ export function Pesaje() {
         </select>
         <label for="p-fecha">Fecha del pesaje</label>
         <input id="p-fecha" type="date" value={fecha} onChange={(e: Event) => { pl.fecha = (e.target as HTMLInputElement).value || hoy(); render() }} />
-        <p class="ayuda">Anote los kilos de cada ordeño. Deje en blanco la vaca que no se pesó. Si ya había pesaje ese día, aquí aparece para corregirlo.</p>
+        <p class="ayuda">Anote los kilos de cada ordeño. Deje en blanco la vaca que no se pesó. Al lado sale el concentrado que le toca: 1 kg por cada {LECHE_POR_KG_CONCENTRADO} kg de leche. Si ya había pesaje ese día, aquí aparece para corregirlo.</p>
         {vacas.map(({ a, seca }) => {
           const p = pesajeDe(a, fecha), antes = pesajeAnterior(a, fecha);
           const coma = (n?: number) => String(n ?? '').replace('.', ',');

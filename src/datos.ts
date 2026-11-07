@@ -196,6 +196,9 @@ export const pesajeAnterior = (a: Animal, fecha: string) => ordenados(a).filter(
 export const esRaro = (n: number | undefined, antes: number | undefined) => !!n && !!antes && (n > antes * 2 || n < antes / 2);
 export const totalPesaje =(e: Evento) => (e.am ?? 0) + (e.pm ?? 0);
 export const kilos = (n: number) => n.toLocaleString('es', { maximumFractionDigits: 1 }) + ' kg';
+// Concentrado sugerido para el día, con la regla de la finca: 1 kg por cada 3 kg de leche (redondeado a 0,1 kg).
+export const LECHE_POR_KG_CONCENTRADO = 3;
+export const concentrado = (lecheKg: number) => Math.round(lecheKg / LECHE_POR_KG_CONCENTRADO * 10) / 10;
 
 // Lee lo que se escribe en el cuadro: acepta coma o punto. '' = no se pesó. NaN = no es un número válido.
 export function leerKilos(t: string): number | undefined {

@@ -1,5 +1,5 @@
 // Cada reporte es un objeto simple que se pinta igual en pantalla, en PDF (imprimir) y en imagen (para enviar por mensaje).
-import { Animal, Db, EVENTOS, MOTIVOS, cuantos, kilos, pesajeDe, totalPesaje, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, textoEvento, prenezAbierta, retiro } from './datos';
+import { Animal, Db, EVENTOS, LECHE_POR_KG_CONCENTRADO, MOTIVOS, concentrado, cuantos, kilos, pesajeDe, totalPesaje, diasHasta, edad, fmt, hoy, nombreA, ordenados, porArete, textoEvento, prenezAbierta, retiro } from './datos';
 
 export interface Seccion { titulo: string; nota: string; cols: string[]; filas: string[][] }
 export interface Reporte { titulo: string; sub: string; secciones: Seccion[] }
@@ -62,13 +62,14 @@ export function pesajes(db: Db, fecha: string): Reporte {
   return {
     titulo: 'Pesaje de leche del ' + fmt(fecha), sub: filas.length ? cuantos(filas.length, 'vaca pesada', 'vacas pesadas') : 'No hay pesaje en esta fecha.',
     secciones: Object.keys(porFinca).sort().map(f => {
-      const xs = porFinca[f], suma = xs.reduce((n, x) => n + totalPesaje(x.p!), 0);
+      const xs = porFinca[f], suma = xs.reduce((n, x) => n + totalPesaje(x.p!), 0), conc = xs.reduce((n, x) => n + concentrado(totalPesaje(x.p!)), 0);
       return {
-        titulo: `${f} — ${kilos(suma)}`, nota: `Promedio por vaca: ${kilos(suma / xs.length)}`,
-        cols: ['Arete', 'Nombre', 'Mañana', 'Tarde', 'Total', 'Cambio'],
+        titulo: `${f} — ${kilos(suma)}`,
+        nota: `Promedio por vaca: ${kilos(suma / xs.length)} · Concentrado del día: ${kilos(conc)} (1 kg por cada ${LECHE_POR_KG_CONCENTRADO} kg de leche)` + (xs.some(x => x.p!.am === undefined || x.p!.pm === undefined) ? '. Donde se pesó un solo ordeño, el concentrado sale sobre ese ordeño.' : ''),
+        cols: ['Arete', 'Nombre', 'Mañana', 'Tarde', 'Total', 'Concentrado', 'Cambio'],
         filas: xs.map(({ a, p }) => {
           const ant = anterior(a), dif = ant ? totalPesaje(p!) - totalPesaje(ant) : null;
-          return [...animal(a, db), kilos(p!.am ?? 0), kilos(p!.pm ?? 0), kilos(totalPesaje(p!)), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
+          return [...animal(a, db), kilos(p!.am ?? 0), kilos(p!.pm ?? 0), kilos(totalPesaje(p!)), kilos(concentrado(totalPesaje(p!))), dif === null ? '—' : (dif > 0 ? '▲ ' : dif < 0 ? '▼ ' : '') + kilos(Math.abs(dif))];
         }),
       };
     }),
