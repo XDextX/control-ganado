@@ -8,9 +8,10 @@ import { VerCambios, VerEscaner, VerQr } from './vistas/Codigos';
 import { MenuReportes, VerReporte } from './vistas/Reportes';
 import { Mover } from './vistas/Mover';
 import { Pesaje } from './vistas/Pesaje';
+import { Senasa } from './vistas/Senasa';
 
 // Una pantalla por nombre de Vista: si falta una, TypeScript avisa (y así se puede restaurar al recargar).
-const VISTAS: Record<Vista, () => Node> = { lista: Lista, reportes: MenuReportes, reporte: VerReporte, animal: Ficha, qr: VerQr, escaner: VerEscaner, cambios: VerCambios, mover: Mover, pesaje: Pesaje };
+const VISTAS: Record<Vista, () => Node> = { lista: Lista, reportes: MenuReportes, reporte: VerReporte, animal: Ficha, qr: VerQr, escaner: VerEscaner, cambios: VerCambios, mover: Mover, pesaje: Pesaje, senasa: Senasa };
 const raiz = document.getElementById('app')!;
 alPintar(() => raiz.replaceChildren(<Encabezado />, <>{est.ejemplo && <div class="card warn" role="status">👀 Está viendo un <b>ejemplo</b> con animales inventados. Nada de lo que haga aquí se guarda.<button class="grande" onClick={() => verEjemplo(false)}>✖️ Salir del ejemplo</button></div>}</>, <main tabindex="-1">{VISTAS[est.vista]()}</main>));
 
