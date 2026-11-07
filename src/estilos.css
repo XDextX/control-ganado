@@ -48,6 +48,8 @@ summary{font-weight:600;padding:14px;border:2px dashed var(--line);border-radius
 .aviso-ok{position:fixed;left:16px;right:16px;bottom:24px;margin:auto;max-width:500px;background:#1f5f30;color:#fff;font-size:1.3em;font-weight:700;text-align:center;padding:20px;border-radius:14px;box-shadow:0 6px 24px #0006;z-index:10}
 main:focus{outline:none}
 .aviso-mal{background:#a32020}
+.aviso-mal button{display:block;width:100%;background:none;border:0;color:inherit;font:inherit;text-align:center;padding:0;min-height:0}
+.aviso-mal button:focus-visible{outline:3px solid #fff;outline-offset:6px}
 /* Zona de borrado: roja para que se note que es peligrosa */
 details.peligro summary{border-color:var(--bad);color:var(--bad)}
 button.peligro{background:#a32020;color:#fff;border-color:#a32020}

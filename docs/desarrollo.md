@@ -41,11 +41,12 @@ src/
   reportes.ts         Reportes como datos + reporteAImagen() (canvas)
   qr.tsx              Generar y leer códigos QR (qrcode, jsqr), formato del QR
   config.ts           Correo de comentarios y URL del repositorio
+  senasa.ts           Leer el Excel de SENASA (.xlsx sin librerías) y agregar sus aretes
   estilos.css         Todos los estilos (claro/oscuro, letra grande, impresión)
-  componentes/        Piezas reutilizables: Arete, CopiaSeguridad, EliminarDatos, Comentarios, Encabezado
-  vistas/             Una pantalla por archivo: Lista, Ficha, Pesaje, Mover, Reportes, Codigos
+  componentes/        Piezas reutilizables: Arete, CopiaSeguridad, EliminarDatos, Comentarios, Encabezado, Ordenos
+  vistas/             Una pantalla por archivo: Lista, Ficha, Pesaje, Mover, Reportes, Codigos, Senasa
   storybook.tsx       Historias del catálogo /storybook
-  *.test.ts           Pruebas de datos.ts, reportes.ts y qr.tsx
+  *.test.ts           Pruebas de datos.ts, reportes.ts, qr.tsx y senasa.ts
 docs/
   auditoria.md        Fallos y vulnerabilidades encontrados y su estado
   desarrollo.md       Este documento
@@ -104,6 +105,10 @@ Otras claves: `ganado.v1.respaldo` (fecha de la última copia enviada o guardada
 - **Avisos:** partos y secados a 30 días o menos (`alertas`).
 - **Pesaje:** un evento por vaca y día (`guardarPesajes` reemplaza). `leerKilos` acepta coma, rechaza más de `MAX_KILOS` (60) por ordeño. `esRaro`: más del doble o menos de la mitad que la vez anterior.
 - **Fechas:** siempre texto `AAAA-MM-DD` en hora **local** (`hoy()`, `fechaLocal`). Para sumar días se usa UTC a mediodía (`sumarDias`), así el horario no mueve la fecha.
+
+## Excel de SENASA (`senasa.ts`)
+
+"Recuperar una copia" también acepta el `.xlsx` de SENASA con los rangos de aretes por finca. Se lee en el teléfono sin librerías: `leerXlsx` abre el `.zip` con `DecompressionStream` y saca las celdas del XML; `rangosDeSenasa` busca las columnas por su encabezado ("Rango Inicial", "Rango Final"…). La pantalla `vistas/Senasa.tsx` deja elegir finca y tipo (leche/carne) por cada finca del Excel; `agregarSenasa` crea solo los aretes que faltan de los rangos seguidos (hasta `MAX_POR_ENTREGA`), llena la finca vacía de los que ya existen y avisa los rangos con huecos. No se guardan nombres de fincas en el código: el repositorio es público.
 
 ## Sincronización entre teléfonos
 

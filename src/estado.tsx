@@ -2,11 +2,12 @@
 import { h } from './jsx';
 import { Animal, KEY, cargar, datosDeEjemplo, guardar, hoy } from './datos';
 import { TipoReporte } from './reportes';
+import type { Destino, Rango, Resultado } from './senasa';
 import { detenerCamara } from './qr';
 
 const REPORTES: TipoReporte[] = ['inventario', 'partos', 'salidas', 'traslados', 'pesajes', 'ficha'];
 
-const VISTAS = ['lista', 'reportes', 'reporte', 'animal', 'qr', 'escaner', 'cambios', 'mover', 'pesaje'] as const;
+const VISTAS = ['lista', 'reportes', 'reporte', 'animal', 'qr', 'escaner', 'cambios', 'mover', 'pesaje', 'senasa'] as const;
 export type Vista = typeof VISTAS[number];
 
 export const est = {
@@ -24,6 +25,7 @@ export const est = {
   criaDe: '', // arete de la madre recién parida: ofrece agregar la cría
   fechaPesaje: '', // día que muestra el reporte de pesajes ('' = el último)
   cambiosDias: 0, // 0 = hoy, 1 = desde ayer, 6 = últimos 7 días
+  senasa: null as { rangos: Rango[]; destinos: Record<string, Destino>; resultado?: Resultado } | null, // Excel de SENASA leído, esperando que se confirme
   planilla: { finca: '', fecha: '', elegidaEl: '' }, // hoja de pesaje; elegidaEl: día en que se eligió la fecha (la app puede quedar abierta varios días)
 };
 
@@ -44,7 +46,7 @@ export function restaurarPantalla() {
   let p: any;
   try { p = JSON.parse(sessionStorage.getItem(PANTALLA) ?? 'null') } catch { return }
   // Lo guardado es de esta pestaña, pero puede venir de otra versión de la app: todo se comprueba antes de usarlo.
-  const vista = (v: unknown): v is Vista => VISTAS.includes(v as Vista) && v !== 'escaner'; // la cámara no se enciende sola
+  const vista = (v: unknown): v is Vista => VISTAS.includes(v as Vista) && v !== 'escaner' && v !== 'senasa'; // la cámara no se enciende sola; el Excel leído no se guarda
   const texto = (v: unknown) => typeof v === 'string' ? v : '';
   const dia = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; // una fecha mal escrita guardaría pesajes que luego se descartan
   if (!p || p.ejemplo || !vista(p.vista)) return; // el ejemplo no se guarda: al recargar se sale de él
@@ -62,7 +64,7 @@ export function restaurarPantalla() {
 }
 
 export function ir(v: Vista) {
-  detenerCamara(); if (v !== est.vista) est.anterior = est.vista; est.vista = v; render(); scrollTo(0, 0);
+  detenerCamara(); quitarError(true); if (v !== est.vista) est.anterior = est.vista; est.vista = v; render(); scrollTo(0, 0);
   document.querySelector<HTMLElement>('main')?.focus({ preventScroll: true }); // quien usa lector de pantalla empieza en la pantalla nueva
   // Fuera de la lista se deja un paso en el historial: así el botón "atrás" del teléfono vuelve en vez de cerrar la app.
   if (v !== 'lista' && !history.state?.app) history.pushState({ app: 1 }, '');
@@ -72,6 +74,7 @@ export function volver() { est.actual = null; ir('lista'); if (history.state?.ap
 
 // Botón "atrás" del teléfono: hace lo mismo que el "← Volver" de cada pantalla.
 addEventListener('popstate', () => {
+  est.senasa = null; // el Excel leído solo sirve en su pantalla
   if (est.vista === 'lista') return; // ya volvió con el botón de la pantalla
   if (est.vista === 'qr') return ir('animal');
   if (est.vista === 'reporte' && est.anterior !== 'lista') return ir(est.anterior);
@@ -101,11 +104,37 @@ export async function compartir(file: File, titulo: string): Promise<'compartido
 
 // Guarda y lo dice en pantalla (las ventanitas del navegador pueden estar bloqueadas). Sin texto, solo avisa si falló.
 export function guardarYAvisar(texto = '') {
-  if (est.ejemplo || guardar(est.db)) { if (texto) avisar(texto); return true }
-  document.querySelector('.aviso-mal')?.remove();
-  const el = <div class="aviso-ok aviso-mal" role="alert" onClick={() => el.remove()}>⚠️ No se pudo guardar. Si cierra la app se perderá lo último. Envíe una copia de seguridad ahora. (Toque para cerrar)</div> as HTMLElement;
-  document.body.appendChild(el);
+  if (est.ejemplo || guardar(est.db)) {
+    if (document.querySelector('.aviso-mal[data-guardado]')) quitarError(); // volvió a guardar bien: el aviso de falla ya no aplica
+    if (texto) avisar(texto);
+    return true;
+  }
+  avisarError('No se pudo guardar. Si cierra la app se perderá lo último. Envíe una copia de seguridad ahora.', { guardado: true });
   return false;
+}
+
+// Aviso rojo que se queda hasta tocarlo: para errores, en pantalla y no en una ventanita del navegador (algunas apps las bloquean).
+// La caja anuncia el texto (role="alert") y dentro va un botón que lo cierra con un toque, Enter o espacio.
+// guardado: el de "no se pudo guardar" no se quita al cambiar de pantalla, solo al tocarlo o cuando un guardado sale bien.
+// foco: false cuando el foco ya está donde la persona tiene que escribir (por ejemplo, el campo que falta).
+export function avisarError(texto: string, { guardado = false, foco = true } = {}) {
+  quitarError();
+  const antes = document.activeElement as HTMLElement | null;
+  const cerrar = () => {
+    caja.remove();
+    // El foco vuelve a donde estaba; si ya no existe, a la pantalla.
+    (antes?.isConnected && antes !== document.body ? antes : document.querySelector<HTMLElement>('main'))?.focus({ preventScroll: true });
+  };
+  const caja = <div class="aviso-ok aviso-mal" role="alert" data-guardado={guardado || undefined}>
+    <button type="button" onClick={cerrar}>⚠️ {texto} (Toque para cerrar)</button>
+  </div> as HTMLElement;
+  document.body.appendChild(caja);
+  if (foco) caja.querySelector('button')!.focus();
+}
+// Quita el aviso rojo. Al cambiar de pantalla (soloSiNoEsDeGuardado) se deja el de "no se pudo guardar".
+export function quitarError(soloSiNoEsDeGuardado = false) {
+  const el = document.querySelector<HTMLElement>('.aviso-mal');
+  if (el && !(soloSiNoEsDeGuardado && el.hasAttribute('data-guardado'))) el.remove();
 }
 
 // Mensaje grande que confirma que algo quedó guardado.

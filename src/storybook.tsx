@@ -15,6 +15,8 @@ import { Ficha } from './vistas/Ficha';
 import { VerCambios, VerQr } from './vistas/Codigos';
 import { MenuReportes, VerReporte } from './vistas/Reportes';
 import { Mover } from './vistas/Mover';
+import { Senasa } from './vistas/Senasa';
+import { propuestaDeFinca } from './senasa';
 import { Pesaje } from './vistas/Pesaje';
 
 // Nada de lo que se toque aquí debe pisar los datos de desarrollo guardados en este navegador.
@@ -69,6 +71,10 @@ const HISTORIAS: Historia[] = [
   { grupo: 'Pantallas', nombre: 'Ficha de un animal trasladado', ver: () => { preparar(); est.actual = animal('999000000008'); return <Ficha /> } },
   { grupo: 'Pantallas', nombre: 'Pesaje de leche (planilla)', ver: () => { preparar(); return <Pesaje /> } },
   { grupo: 'Pantallas', nombre: 'Mover animales', ver: () => { preparar(); return <Mover /> } },
+  { grupo: 'Pantallas', nombre: 'Excel de SENASA', ver: () => {
+    const rangos = [{ finca: 'FINCA LA ESPERANZA', inicio: '999000000101', fin: '999000000110', total: 10, fecha: '21/10/2026' }, { finca: 'Parcela 3-Los Alamos', inicio: '999000000200', fin: '999000900000', total: 40, fecha: '08/10/2026' }];
+    preparar(); est.senasa = { rangos, destinos: Object.fromEntries(rangos.map(r => [r.finca, propuestaDeFinca(est.db, r.finca)])) }; return <Senasa />;
+  } },
   { grupo: 'Pantallas', nombre: 'Alta de un animal', ver: () => { preparar(); return <Ficha /> } },
   { grupo: 'Pantallas', nombre: 'Alta de una cría (datos puestos)', ver: () => { preparar({ nuevo: { finca: 'El Roble', tipo: 'leche', raza: 'Jersey', nac: hace(0), notas: 'Cría de 999000000049 (Lucera)' } }); return <Ficha /> } },
   { grupo: 'Pantallas', nombre: 'QR para pasar un animal', ver: () => { preparar({ qrModo: 'animal' }); est.actual = animal('999000000049'); return <VerQr /> } },
