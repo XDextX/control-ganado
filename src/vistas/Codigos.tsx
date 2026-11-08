@@ -1,7 +1,7 @@
 // Pantallas de códigos QR: mostrar el de un animal o del corral, pasar lo anotado y escanear.
 import { h, Fragment } from '../jsx';
 import { areteValido, cambiosDesde, cuantos, fusionar, hoy, sumarDias } from '../datos';
-import { abrir, avisar, avisarError, est, guardarYAvisar, ir, render, verEjemplo, volver } from '../estado';
+import { abrir, avisar, avisarError, est, guardarOVolver, ir, render, verEjemplo, volver } from '../estado';
 import { Escaner, ImagenQr, interpretar, qrDeAnimal, qrDeDatos } from '../qr';
 
 export function VerQr() {
@@ -27,13 +27,14 @@ function leerQr(texto: string) {
   try { l = interpretar(texto) } catch { enPausa = true; ir('escaner'); return avisarError('El código QR no se pudo leer. Intente de nuevo.') }
   if (l.tipo === 'animal') {
     if (est.ejemplo) verEjemplo(false); // lo recibido es real: no se junta con el ejemplo, que no se guarda
+    const antes = JSON.stringify(est.db);
     try {
       const n = fusionar(est.db, l.datos);
-      if (!guardarYAvisar()) return ir('lista');
+      if (!guardarOVolver(antes, 'lo recibido', () => ir('lista'))) return;
       const aretes = Object.values((l.datos as { animales: Record<string, { arete: string }> }).animales).map(a => a.arete.trim());
       if (aretes.length === 1 && Object.hasOwn(est.db.animales, aretes[0])) abrir(aretes[0]); else volver();
       return avisar(`✅ Listo. Se agregaron ${cuantos(n.animales, 'animal nuevo', 'animales nuevos')} y ${cuantos(n.eventos, 'evento nuevo', 'eventos nuevos')}. No se borró nada.${n.descartados ? (n.descartados === 1 ? ' Se ignoró 1 dato dañado que venía mal escrito.' : ` Se ignoraron ${n.descartados} datos dañados que venían mal escritos.`) : ''}`, 7000);
-    } catch (e) { ir('lista'); return avisarError('Este código no es de la app de ganado. ' + (e as Error).message) }
+    } catch (e) { ir('lista'); return avisarError(`Este código no es de la app de ganado (${(e as Error).message}).`) }
   }
   if (!areteValido(l.arete)) { ir('lista'); return avisarError('Este código QR no es de un arete ni de la app de ganado.') }
   if (Object.hasOwn(est.db.animales, l.arete)) return abrir(l.arete);
