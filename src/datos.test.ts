@@ -222,7 +222,7 @@ describe('revisión 2026-10-30', () => {
     const db = cargar();
     expect(Object.keys(db.animales)).toEqual(['A']);
     expect([...m.entries()].find(([k]) => k.startsWith(KEY + '.danado-'))?.[1]).toBe(crudo);
-    expect(problemaAlCargar).toMatch(/datos dañados/);
+    expect(problemaAlCargar).toMatch(/datos? dañados?/);
     // No se repite en cada apertura: lo limpio ya quedó guardado.
     cargar();
     expect(problemaAlCargar).toBe('');
@@ -237,7 +237,7 @@ describe('revisión 2026-10-30', () => {
     const { m } = guardado('{esto no es una copia');
     expect(cargar()).toEqual({ animales: {} });
     expect([...m.entries()].find(([k]) => k.startsWith(KEY + '.danado-'))?.[1]).toBe('{esto no es una copia');
-    expect(problemaAlCargar).toMatch(/No se pudieron leer los datos guardados/);
+    expect(problemaAlCargar).toMatch(/No se pudieron leer los datos/);
     m.set(KEY, JSON.stringify({ animales: {} }));
     cargar();
     expect(problemaAlCargar).toBe('');

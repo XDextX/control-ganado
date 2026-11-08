@@ -32,7 +32,7 @@ export const est = {
 export function verEjemplo(si: boolean) { est.ejemplo = si; est.db = si ? datosDeEjemplo() : cargar(); volver(); avisarProblemaAlCargar() }
 // Datos dañados al abrir la app: aviso rojo en pantalla, una sola vez.
 export function avisarProblemaAlCargar() {
-  if (problemaAlCargar) { avisarError(problemaAlCargar); olvidarProblemaAlCargar() }
+  if (problemaAlCargar) { avisarError(problemaAlCargar, { queda: true }); olvidarProblemaAlCargar() }
 }
 
 // main.tsx registra cómo se pinta la app (así las pantallas no se importan entre sí en círculo).
@@ -117,11 +117,23 @@ export function guardarYAvisar(texto = '') {
   return false;
 }
 
+// Para lo que se junta de una vez (una copia, un QR): si no se puede guardar, todo vuelve a `antes` (JSON de est.db)
+// y se dice así, sin el aviso de «no se guardó lo último», que solo queda si ya estaba (eso sí está sin guardar).
+// salir: a dónde ir al fallar. Tras el escáner es ir('lista') sin history.back(): el navegador restauraría el scroll
+// después del aviso y lo dejaría fuera de la vista.
+export function guardarOVolver(antes: string, que: string, salir = volver) {
+  const yaFallaba = !!document.querySelector('.aviso-mal[data-guardado]');
+  if (guardarYAvisar()) return true;
+  est.db = JSON.parse(antes); salir(); if (!yaFallaba) quitarError('guardado');
+  avisarError(`No se pudo guardar ${que}: no se agregó nada; todo quedó como estaba.`);
+  return false;
+}
+
 // Aviso rojo que se queda hasta tocarlo: para errores, en pantalla y no en una ventanita del navegador (algunas apps las bloquean).
 // La caja anuncia el texto (role="alert") y dentro va un botón que lo cierra con un toque, Enter o espacio.
 // guardado: el de "no se pudo guardar" no se quita al cambiar de pantalla, solo al tocarlo o cuando un guardado sale bien.
 // foco: false cuando el foco ya está donde la persona tiene que escribir (por ejemplo, el campo que falta).
-// Ningún aviso flota: todos son franjas al principio de la página, en #avisos, y empujan el contenido en vez de taparlo.
+// Ningún aviso flota: todos son franjas al principio de la página, en #avisos (el de queda, justo debajo), y empujan el contenido en vez de taparlo.
 // Puede haber dos rojos a la vez: el de guardado (siempre primero) y el de otro error.
 // Un error de un campo no va aquí: va debajo de ese campo (ver «Pegue aquí una copia» y la finca del Excel).
 const franjas = () => document.getElementById('avisos') ?? document.body.insertAdjacentElement('afterbegin', <div id="avisos" /> as HTMLElement)!;
@@ -131,19 +143,22 @@ function ajustarFranja() {
   document.documentElement.style.scrollPaddingTop = f && getComputedStyle(f).position === 'sticky' ? f.offsetHeight + 'px' : '';
 }
 addEventListener('resize', ajustarFranja);
-export function avisarError(texto: string, { guardado = false, foco = !guardado }: { guardado?: boolean; foco?: boolean } = {}) {
+// queda: tampoco se quita al cambiar de pantalla (datos dañados al abrir: puede llegar justo antes de ir a otra pantalla).
+export function avisarError(texto: string, { guardado = false, foco = !guardado, queda = false }: { guardado?: boolean; foco?: boolean; queda?: boolean } = {}) {
   quitarError(guardado ? 'guardado' : 'otros');
+  if (queda) document.querySelectorAll('.aviso-mal[data-queda]').forEach(e => e.remove()); // el mismo aviso no se repite
   const antes = document.activeElement as HTMLElement | null;
   const cerrar = () => {
     caja.remove(); ajustarFranja();
     // El foco vuelve a donde estaba; si ya no existe, a la pantalla.
     (antes?.isConnected && antes !== document.body ? antes : document.querySelector<HTMLElement>('main'))?.focus({ preventScroll: true });
   };
-  const caja = <div class="aviso-mal" role="alert" data-guardado={guardado || undefined}>
+  const caja = <div class="aviso-mal" role="alert" data-guardado={guardado || undefined} data-queda={queda || undefined}>
     <span>⚠️ {texto}</span>
     <button type="button" onClick={cerrar}>✕ Cerrar</button>
   </div> as HTMLElement;
-  if (guardado) franjas().prepend(caja); else franjas().appendChild(caja);
+  // El de queda va justo debajo de #avisos, fuera de la franja pegada: no baja con cada aviso verde.
+  if (guardado) franjas().prepend(caja); else if (queda) franjas().after(caja); else franjas().appendChild(caja);
   ajustarFranja();
   // Con foco (por ejemplo, un archivo que no se pudo leer) la página sube hasta el aviso. El de guardado no se lleva el foco:
   // se anuncia igual (role="alert") y no hace saltar la página mientras se anota.
@@ -165,7 +180,7 @@ export function errorCampo(campo: HTMLElement, texto: string) {
 export function quitarError(cuales: 'otros' | 'guardado' | 'todos' = 'todos') {
   for (const el of document.querySelectorAll<HTMLElement>('.aviso-mal')) {
     const esGuardado = el.hasAttribute('data-guardado');
-    if (cuales === 'otros' && esGuardado || cuales === 'guardado' && !esGuardado) continue;
+    if (cuales === 'otros' && (esGuardado || el.hasAttribute('data-queda')) || cuales === 'guardado' && !esGuardado) continue;
     const teniaFoco = el.contains(document.activeElement);
     el.remove();
     if (teniaFoco) document.querySelector<HTMLElement>('main')?.focus({ preventScroll: true });

@@ -71,12 +71,12 @@ export function cargar(): Db {
     if (malos) {
       // Primero el rescate; lo limpio se guarda solo si el rescate quedó, y así el aviso no se repite en cada apertura.
       try { localStorage.setItem(KEY + '.danado-' + Date.now(), crudo!); localStorage.setItem(KEY, JSON.stringify(db)) } catch { /* sin espacio */ }
-      problemaAlCargar = `Había ${malos === 1 ? '1 dato dañado o demasiado largo' : malos + ' datos dañados o demasiado largos'} y se quitó de la lista. Lo guardado antes quedó aparte: en “⚙️ Copia de seguridad” puede guardar los datos rescatados.`;
+      problemaAlCargar = `${malos === 1 ? 'Se quitó 1 dato dañado' : `Se quitaron ${malos} datos dañados`}. Lo de antes quedó aparte en ⚙️ Copia de seguridad.`;
     }
   } catch {
     // Se guarda lo ilegible aparte antes de seguir: el próximo guardado no debe borrar lo único que había.
     try { if (crudo) localStorage.setItem(KEY + '.danado-' + Date.now(), crudo) } catch { /* sin espacio */ }
-    problemaAlCargar = 'No se pudieron leer los datos guardados. Quedaron aparte: en “⚙️ Copia de seguridad” puede guardar los datos rescatados. Recupere su copia de seguridad.';
+    problemaAlCargar = 'No se pudieron leer los datos. Quedaron aparte en ⚙️ Copia de seguridad; recupere su copia.';
   }
   return db;
 }
