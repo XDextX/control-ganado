@@ -103,6 +103,8 @@ input.raro{border-color:#c98a00;background:#fff4cc;color:#1a1a1a}
 .barra-guardar{position:sticky;bottom:0;background:var(--bg);border-top:2px solid var(--line);padding:8px 0 4px;margin-top:10px;z-index:5}
 .barra-guardar p{margin:0 0 6px}
 .barra-guardar button.grande{margin:0}
+/* En el teléfono, mientras se escribe, el teclado ya ocupa media pantalla: la barra se queda al final de la lista y deja ver las vacas */
+@media (pointer:coarse){main:has(.pesaje input:focus) .barra-guardar{position:static}}
 /* Botones de filtro (categoría) */
 .filtros{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
 .filtros button{min-height:48px;font-weight:600}
