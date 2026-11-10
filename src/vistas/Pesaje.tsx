@@ -157,9 +157,9 @@ export function Pesaje() {
           filas.push({ arete: a.arete, am, pm, total, antes });
           return fila;
         })}
-        {/* Barra fija abajo: el total y Guardar siempre a la vista, sin bajar hasta el final */}
+        {/* El total queda al final de la hoja; Guardar va fijo abajo, siempre a la vista */}
+        <p><b ref={(el: HTMLElement) => { resumen = el; queueMicrotask(recalcular) }}></b></p>
         <div class="barra-guardar">
-          <p><b ref={(el: HTMLElement) => { resumen = el; queueMicrotask(recalcular) }}></b></p>
           <button class="pri grande" onClick={guardarTodo}>💾 Guardar pesaje</button>
         </div>
       </>}
