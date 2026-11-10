@@ -1,5 +1,6 @@
 import { h, Fragment } from '../jsx';
-import { Animal, alertas, cuantos, diasHasta, edad, estaSeca, fincas, haceCuanto, kilos, porArete, prenezAbierta, retiro, textoEvento, totalPesaje, ultimoEvento, ultimoPesaje } from '../datos';
+import { abrirPesaje } from './Pesaje';
+import { Animal, alertas, coincide, cuantos, diasHasta, edad, estaSeca, fincas, haceCuanto, kilos, porArete, prenezAbierta, retiro, textoEvento, totalPesaje, ultimoEvento, ultimoPesaje } from '../datos';
 import { abrir, est, ir, render, verEjemplo } from '../estado';
 import { AvisoRespaldo, CopiaSeguridad } from '../componentes/CopiaSeguridad';
 import { EliminarDatos } from '../componentes/EliminarDatos';
@@ -82,10 +83,8 @@ function Tarjeta({ a }: { a: Animal }) {
 
 // Resultados de la búsqueda, justo debajo del buscador (incluye vendidos y todas las fincas: se busca un animal concreto).
 function Resultados() {
-  const q = est.filtro.q.trim().toLowerCase();
-  if (!q) return null;
-  const hallados = Object.values(est.db.animales)
-    .filter(a => a.arete.toLowerCase().includes(q) || (a.nombre || '').toLowerCase().includes(q)).sort(porArete);
+  if (!est.filtro.q.trim()) return null;
+  const hallados = Object.values(est.db.animales).filter(a => coincide(a, est.filtro.q)).sort(porArete);
   if (!hallados.length) return <p class="mut">No se encontró ningún animal con “{est.filtro.q.trim()}”. Revise el número.</p>;
   return <>
     {hallados.slice(0, POR_PAGINA).map(a => <Tarjeta a={a} />)}
@@ -131,7 +130,7 @@ export function Lista() {
       <div class="fila">
         {hay && <button onClick={() => ir('cambios')}>📲 Pasar lo anotado</button>}
         {fincas(db).length > 0 && <button onClick={() => ir('mover')}>🚚 Mover animales</button>}
-        {Object.values(db.animales).some(a => a.tipo === 'leche' && !retiro(a)) && <button onClick={() => ir('pesaje')}>🥛 Pesaje de leche</button>}
+        {Object.values(db.animales).some(a => a.tipo === 'leche' && !retiro(a)) && <button onClick={abrirPesaje}>🥛 Pesaje de leche</button>}
         <button onClick={() => ir('reportes')}>📋 Reportes</button>
       </div>
       <AvisoRespaldo />

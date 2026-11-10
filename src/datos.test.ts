@@ -1,9 +1,32 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ficha, inventario, partos, pesajes, salidas, traslados } from './reportes';
-import { Animal, Db, KEY, alertas, concentrado, juntar, cargar, datosDeEjemplo, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, diceBorrar, problemaAlCargar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
+import { Animal, Db, KEY, alertas, concentrado, juntar, cargar, datosDeEjemplo, esRepeticion, guardar, textoEvento, anotadoEl, limpiarAnimal, cambiosDesde, coincide, exacta, buscar, diceBorrar, problemaAlCargar, edad, esRaro, fusionar, guardarPesajes, leerKilos, pesajeDe, prenezAbierta, sumarDias, totalPesaje, trasladar, vacasDeLeche } from './datos';
 
 const vaca = (tipo: 'leche' | 'carne', eventos: Animal['eventos']): Animal =>
   ({ arete: 'X', nombre: '', tipo, nac: '', finca: '', sexo: 'H', raza: '', categoria: '', notas: '', eventos });
+
+describe('buscar un animal', () => {
+  it('por arete o nombre, sin importar mayúsculas ni tildes', () => {
+    const a = { arete: 'CR-001-4521', nombre: 'Lucía' } as Animal;
+    expect(coincide(a, '4521')).toBe(true);
+    expect(coincide(a, ' lucia ')).toBe(true);
+    expect(coincide(a, 'LUCÍA')).toBe(true);
+    expect(coincide(a, '4533')).toBe(false);
+    expect(coincide(a, '  ')).toBe(false);
+    expect(coincide({ arete: '999000000001' } as Animal, '0001')).toBe(true);
+  });
+  it("exacta: final del arete o nombre completo", () => {
+    const a = { arete: "CR-001-4521", nombre: "Lucía" } as Animal;
+    expect(exacta(a, "4521")).toBe(true);
+    expect(exacta(a, "lucia")).toBe(true);
+    expect(exacta(a, "452")).toBe(false);
+    expect(exacta(a, "luc")).toBe(false);
+  });
+  it("los exactos salen primero", () => {
+    const xs = [{ arete: "CR-001-45210", nombre: "" }, { arete: "CR-001-4521", nombre: "" }] as Animal[];
+    expect(buscar(xs, "4521").map(a => a.arete)).toEqual(["CR-001-4521", "CR-001-45210"]);
+  });
+});
 
 describe('fechas del hato', () => {
   it('parto = monta + 283 días; secado 60 días antes solo en leche', () => {

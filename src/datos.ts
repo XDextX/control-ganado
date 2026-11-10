@@ -118,7 +118,14 @@ export const edad = (nac: string, desde = hoy()) => {
   return m < 12 ? m + ' meses' : Math.floor(m / 12) + (m < 24 ? ' año' : ' años') + (m % 12 ? ' ' + (m % 12) + ' m' : '');
 };
 // Acepta "borrar", "Borrar.", " BORRAR " o "Bórrar": el autocorrector del teléfono suele agregar puntos o tildes.
-export const diceBorrar = (t: string) => t.normalize('NFD').toUpperCase().replace(/[^A-Z]/g, '') === 'BORRAR';
+// Búsqueda de un animal por arete o nombre, sin importar mayúsculas ni tildes («lucia» encuentra «Lucía»).
+const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+export const coincide = (a: Animal, q: string) => { const b = sinTildes(q.trim()); return !!b && sinTildes(`${a.arete} ${a.nombre || ''}`).includes(b) };
+// Lo buscado es el final del arete o el nombre completo: va primero en los resultados.
+export const exacta = (a: Animal, q: string) => { const b = sinTildes(q.trim()); return !!b && (a.arete.toLowerCase().endsWith(b) || sinTildes(a.nombre || '') === b) };
+// Los que coinciden, con los exactos primero.
+export const buscar = (as: Animal[], q: string) => as.filter(a => coincide(a, q)).sort((x, y) => +exacta(y, q) - +exacta(x, q));
+export const diceBorrar =(t: string) => t.normalize('NFD').toUpperCase().replace(/[^A-Z]/g, '') === 'BORRAR';
 export const cuantos =(n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 export const nuevoId =() => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 export const porArete = (x: Animal, y: Animal) => x.arete.localeCompare(y.arete, 'es', { numeric: true });
