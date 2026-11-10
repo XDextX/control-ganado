@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { Animal, Db, fusionar } from './datos';
 // @ts-expect-error pngjs llega con qrcode y no trae tipos
 import { PNG } from 'pngjs';
-import { MAX_PARTES, OPCIONES_QR, PREFIJO, faltan, interpretar, juntarPartes, leerParte, partesQr, sumarParte, vigente } from './qr';
+import { MAX_PARTES, OPCIONES_QR, PREFIJO, modulosCorral, faltan, interpretar, juntarPartes, leerParte, partesQr, sumarParte, vigente } from './qr';
 import { SinSoporte, copiaComprimida, leerCopia } from './comprimir';
 
 const vaca: Animal = { arete: '999000000049', nombre: 'Lucera', tipo: 'leche', nac: '2020-10-13', finca: 'El Roble', sexo: 'H',
@@ -124,5 +124,38 @@ describe('teléfono sin compresor', () => {
       expect(await copiaComprimida('{"animales":{}}')).toBe('{"animales":{}}');
       await expect(leerCopia(c, 2 ** 20)).rejects.toBeInstanceOf(SinSoporte);
     } finally { vi.unstubAllGlobals() }
+  });
+});
+
+describe('QR del corral', () => {
+  it('con el hueco del logo se sigue leyendo el arete', () => {
+    for (const arete of ['999000000001', 'CR-001-4521', 'PEND-12345678']) {
+      const { n, ini, fin, oscuro } = modulosCorral(arete);
+      expect(fin - ini).toBeGreaterThan(3); // de verdad hay hueco
+      const px = 6, borde = 4, lado = (n + 2 * borde) * px, img = new Uint8ClampedArray(lado * lado * 4).fill(255);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (oscuro(x, y))
+        for (let dy = 0; dy < px; dy++) for (let dx = 0; dx < px; dx++) {
+          const o = (((y + borde) * px + dy) * lado + (x + borde) * px + dx) * 4; img[o] = img[o + 1] = img[o + 2] = 0;
+        }
+      expect(jsQR(img, lado, lado)?.data).toBe(arete);
+    }
+  });
+  it('un arete corto lleva un código de al menos 37×37 y aguanta cuadritos dañados (barro, rayones)', () => {
+    const { n, ini, fin, oscuro } = modulosCorral('999000000001');
+    expect(n).toBeGreaterThanOrEqual(37);
+    let semilla = 7; const azar = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
+    // Solo se dañan cuadritos de datos: los ojos, la información de formato, las líneas de tiempo y la marca de alineación los da por buenos cualquier lector.
+    const ojo = (x: number, y: number) => ((x < 9 || x >= n - 8) && (y < 9 || y >= n - 8)) || x === 6 || y === 6 || (x >= n - 9 && x <= n - 5 && y >= n - 9 && y <= n - 5);
+    for (let intento = 0; intento < 10; intento++) {
+      // 1 % de los cuadritos cambiados al azar y repartidos (lo más difícil para la corrección), además del hueco del logo
+      const danado = new Set<number>();
+      while (danado.size < Math.round(n * n * 0.01)) { const x = Math.floor(azar() * n), y = Math.floor(azar() * n); if (!ojo(x, y) && !(x >= ini && x < fin && y >= ini && y < fin)) danado.add(y * n + x) }
+      const px = 6, borde = 4, lado = (n + 2 * borde) * px, img = new Uint8ClampedArray(lado * lado * 4).fill(255);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (oscuro(x, y) !== danado.has(y * n + x))
+        for (let dy = 0; dy < px; dy++) for (let dx = 0; dx < px; dx++) {
+          const o = (((y + borde) * px + dy) * lado + (x + borde) * px + dx) * 4; img[o] = img[o + 1] = img[o + 2] = 0;
+        }
+      expect(jsQR(img, lado, lado)?.data).toBe('999000000001');
+    }
   });
 });

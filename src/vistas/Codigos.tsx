@@ -2,7 +2,7 @@
 import { h, Fragment } from '../jsx';
 import { areteValido, cambiosDesde, cuantos, fusionar, hoy, sumarDias } from '../datos';
 import { abrir, avisar, avisarError, est, guardarOVolver, ir, render, verEjemplo, volver } from '../estado';
-import { Envio, Escaner, ImagenQr, QrDeDatos, detenerCamara, faltan, interpretar, juntarPartes, leerParte, sumarParte, vigente } from '../qr';
+import { Envio, Escaner, QrCorral, QrDeDatos, detenerCamara, faltan, interpretar, juntarPartes, leerParte, sumarParte, vigente } from '../qr';
 import { SinSoporte } from '../comprimir';
 
 export function VerQr() {
@@ -12,7 +12,7 @@ export function VerQr() {
       <div class="noprint"><button onClick={() => ir('animal')}>← Volver</button></div>
       <div class="card" style="text-align:center">
         <h2>{corral ? 'Arete' : 'Pasar animal'} {a.arete}{a.nombre ? ' · ' + a.nombre : ''}</h2>
-        {corral ? <ImagenQr texto={a.arete} /> : <QrDeDatos datos={{ animales: { [a.arete]: a } }} />}
+        {corral ? <QrCorral arete={a.arete} nombre={a.nombre} /> : <QrDeDatos datos={{ animales: { [a.arete]: a } }} />}
         <p class="noprint">{corral
           ? 'Imprima este código y péguelo en el corral o junto al arete. Al escanearlo con la app se abre la ficha del animal.'
           : 'En el otro teléfono abra la app, toque “📷 Escanear código QR” y apunte a esta pantalla. Se suman los datos sin borrar nada.'}</p>
