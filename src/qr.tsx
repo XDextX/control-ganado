@@ -75,7 +75,7 @@ export function QrDeDatos({ datos }: { datos: Db }) {
       if (enfocado === sig && sig.disabled) ant.focus();
     };
     caja.replaceChildren(<div>
-      {partes.length > 1 && <p aria-live="polite">{titulo}</p>}
+      {partes.length > 1 && <p aria-live="polite" class="qr-parte">{titulo}</p>}
       {imagen}
       {partes.length > 1 && <div class="paginas">
         <button class="grande" ref={(el: HTMLButtonElement) => (ant = el)} onClick={() => mostrar(-1)}>← Anterior</button>
@@ -90,7 +90,59 @@ export function QrDeDatos({ datos }: { datos: Db }) {
 }
 
 // Píxeles enteros por cuadrito (scale, no width): con 4,5 px los cuadritos salían de 4 y 5 y la cámara no leía los códigos densos.
+// Negro sobre blanco: máximo contraste para leer desde una pantalla; el color va solo en el del corral.
 export const OPCIONES_QR = { errorCorrectionLevel: 'L', margin: 2, scale: 5 } as const;
+
+// ---------- QR del corral (se imprime): solo lleva el arete, así que admite diseño ----------
+// Corrección H (aguanta que se tape hasta un 30 %): el logo del centro tapa bastante menos.
+const LOGO = 0.22; // lado del logo, en proporción al código
+const esOjo = (n: number, x: number, y: number) => (x < 7 || x >= n - 7) && (y < 7 || y >= n - 7) && !(x >= n - 7 && y >= n - 7);
+// Cuadritos del código, sin los de debajo del logo (true = oscuro).
+export function modulosCorral(arete: string) {
+  // Al menos versión 5 (37×37): en un código de 21×21 el logo se comería casi toda la corrección y no quedaría margen para barro o rayones.
+  let q; try { q = QRCode.create(arete, { errorCorrectionLevel: 'H', version: 5 }) } catch { q = QRCode.create(arete, { errorCorrectionLevel: 'H' }) }
+  const m = q.modules, n = m.size;
+  const ini = Math.floor(n * (1 - LOGO) / 2), fin = n - ini;
+  return { n, ini, fin, oscuro: (x: number, y: number) => !!m.get(y, x) && !(x >= ini && x < fin && y >= ini && y < fin) };
+}
+
+const VERDE = '#1f5f30';
+export function QrCorral({ arete, nombre }: { arete: string; nombre: string }) {
+  const img = <img alt={`Código QR del arete ${arete}`} class="qr-corral" /> as HTMLImageElement;
+  const { n, ini, fin, oscuro } = modulosCorral(arete);
+  // Las letras crecen con el código: impreso a 6 cm, el arete mide unos 6 mm y el nombre unos 4 mm.
+  const px = 14, borde = 4 * px, lado = n * px + 2 * borde, alto = lado + Math.round(lado * 0.3), letraArete = Math.round(lado * 0.1), letraNombre = Math.round(lado * 0.065);
+  const c = document.createElement('canvas'); c.width = lado; c.height = alto;
+  const x = c.getContext('2d')!;
+  // roundRect no existe en iOS 15: ahí van esquinas rectas.
+  const redondo = (a: number, b: number, w: number, h: number, r: number) => { x.beginPath(); if (x.roundRect) x.roundRect(a, b, w, h, r); else x.rect(a, b, w, h); x.fill() };
+  const dibujar = (logo?: HTMLImageElement) => {
+    x.fillStyle = '#fff'; x.fillRect(0, 0, lado, alto);
+    // Marco para recortar
+    x.setLineDash([10, 8]); x.strokeStyle = '#888'; x.lineWidth = 2; x.strokeRect(4, 4, lado - 8, alto - 8); x.setLineDash([]);
+    x.fillStyle = VERDE;
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++)
+      if (oscuro(i, j) && !esOjo(n, i, j)) { x.beginPath(); x.arc(borde + (i + .5) * px, borde + (j + .5) * px, px * .46, 0, 7); x.fill() }
+    // Los tres «ojos» de las esquinas, redondeados pero llenos: la cámara se guía por ellos.
+    for (const [i, j] of [[0, 0], [n - 7, 0], [0, n - 7]]) {
+      const a = borde + i * px, b = borde + j * px;
+      redondo(a, b, 7 * px, 7 * px, 2 * px);
+      x.fillStyle = '#fff'; redondo(a + px, b + px, 5 * px, 5 * px, 1.4 * px);
+      x.fillStyle = VERDE; redondo(a + 2 * px, b + 2 * px, 3 * px, 3 * px, px);
+    }
+    if (logo) { const a = borde + ini * px, l = (fin - ini) * px; x.fillStyle = '#fff'; redondo(a, a, l, l, px); x.drawImage(logo, a + px * .6, a + px * .6, l - px * 1.2, l - px * 1.2) }
+    x.fillStyle = '#1a1a1a'; x.textAlign = 'center';
+    x.font = `bold ${letraArete}px system-ui, sans-serif`; x.fillText(arete, lado / 2, lado + letraArete * 0.6, lado - 40);
+    if (nombre) { x.font = `${letraNombre}px system-ui, sans-serif`; x.fillText(nombre, lado / 2, lado + letraArete * 0.6 + letraNombre * 1.5, lado - 40) }
+    img.src = c.toDataURL('image/png');
+  };
+  // Si algo falla con el logo (un navegador que no dibuja el SVG), la etiqueta sale igual, sin logo: nunca en blanco.
+  const sinLogo = () => { try { dibujar() } catch { img.alt = `No se pudo dibujar el código del arete ${arete}` } };
+  const logo = new Image(); logo.onload = () => { try { dibujar(logo) } catch { sinLogo() } }; logo.onerror = sinLogo; logo.src = 'icon.svg';
+  return img;
+}
+
+
 
 export function ImagenQr({ texto }: { texto: string | QRCode.QRCodeSegment[] }) {
   const img = <img alt="Código QR" style="width:100%;max-width:420px;display:block;margin:auto;image-rendering:pixelated" /> as HTMLImageElement;

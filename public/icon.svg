@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!-- Ícono propio (cabeza de vaca), sin emojis de terceros -->
   <rect width="512" height="512" rx="96" fill="#2f6f3e"/>
   <path d="M120 170c-40-6-62 14-60 40 30 10 62 6 86-10z" fill="#f6f4ef"/>
