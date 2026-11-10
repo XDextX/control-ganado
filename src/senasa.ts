@@ -1,6 +1,7 @@
 // Excel de SENASA (.xlsx) con los rangos de aretes que asignó a cada finca. Se lee en el teléfono, sin librerías:
 // un .xlsx es un .zip con hojas XML, y el navegador ya sabe descomprimirlo (DecompressionStream).
 import { Animal, Db, fincas } from './datos';
+import { SinSoporte, descomprimir as descomprimirHasta } from './comprimir';
 
 export interface Rango { finca: string; inicio: string; fin: string; total: number; fecha: string }
 // Lo que la persona elige por cada finca del Excel antes de agregar.
@@ -11,17 +12,8 @@ export interface Destino { nombre: string; tipo: Animal['tipo'] }
 export const MAX_ENTREGAS = 1000, MAX_ARCHIVO = 5 * 2 ** 20, MAX_DESCOMPRIMIDO = 20 * 2 ** 20, MAX_COLUMNAS = 16384, MAX_FILAS = 50000;
 const muyGrande = () => new Error('el Excel es demasiado grande para ser el de aretes de SENASA');
 
-// Descomprime por trozos y se detiene en cuanto pasa del límite (un .zip de pocos KB puede inflarse a cientos de MB).
-async function descomprimir(datos: Uint8Array) {
-  const lector = new Blob([datos]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader(), trozos: Uint8Array[] = [];
-  for (let total = 0; ;) {
-    const { done, value } = await lector.read().catch(() => { throw new Error('el archivo de Excel está dañado') });
-    if (done) break;
-    if ((total += value.length) > MAX_DESCOMPRIMIDO) { await lector.cancel(); throw muyGrande() }
-    trozos.push(value);
-  }
-  return new Uint8Array(await new Blob(trozos).arrayBuffer());
-}
+const descomprimir = (datos: Uint8Array) => descomprimirHasta(datos, MAX_DESCOMPRIMIDO, 'deflate-raw') // un .zip usa deflate sin cabecera
+  .catch(e => { throw e instanceof RangeError ? muyGrande() : e instanceof SinSoporte ? e : new Error('el archivo de Excel está dañado') });
 
 // Archivos del .zip por nombre: primero se miran los nombres, y solo se descomprimen los que se eligen.
 async function abrirZip(buf: ArrayBuffer, elegir: (nombres: string[]) => string[]) {
