@@ -1,14 +1,29 @@
 import { h } from '../jsx';
 import { KEY, cuantos, diasHasta, fusionar, hoy, marcarRespaldo, rescatados, ultimoRespaldo } from '../datos';
 import { avisar, avisarError, compartir, quitarError, descargar, est, guardarOVolver, ir, puedeCompartir, render, verEjemplo, volver } from '../estado';
+import { SinSoporte, copiaComprimida, leerCopia } from '../comprimir';
 import { leerXlsx, propuestaDeFinca, rangosDeSenasa } from '../senasa';
 
 // Como texto (.txt): algunos navegadores de teléfono no dejan compartir archivos .json, pero sí .txt. El contenido es el mismo.
-const archivoCopia = () => new File([JSON.stringify(est.db, null, 1)], `ganado-copia-${hoy()}.txt`, { type: 'text/plain' });
-export const textoCopia = (cuando = '') => puedeCompartir(archivoCopia()) ? `📲 Enviar una copia ${cuando} (por mensaje)` : `💾 Guardar una copia ${cuando}`;
+// Va comprimida (pesa varias veces menos); «Recuperar una copia» abre también las viejas, sin comprimir.
+const archivoDe = (contenido: string) => new File([contenido], `ganado-copia-${hoy()}.txt`, { type: 'text/plain' });
+// Se comprime al pintar la pantalla: al tocar el botón ya está lista, y compartir o copiar no espera
+// (algunos teléfonos solo dejan compartir justo después del toque).
+let lista = { json: '', texto: '' };
+const preparar = () => {
+  const json = JSON.stringify(est.db);
+  if (lista.json === json) return;
+  const l = lista = { json, texto: '' };
+  copiaComprimida(json).then(t => { l.texto = t }, () => { l.texto = json });
+};
+const textoYa = () => { const json = JSON.stringify(est.db); return lista.json === json && lista.texto ? lista.texto : null };
+const textoDeCopia = async () => textoYa() ?? copiaComprimida(JSON.stringify(est.db));
+const archivoCopia = async () => archivoDe(await textoDeCopia());
+const sePuedeCompartir = () => puedeCompartir(archivoDe(""));
+export const textoCopia = (cuando = '') => (preparar(), sePuedeCompartir()) ? `📲 Enviar una copia ${cuando} (por mensaje)` : `💾 Guardar una copia ${cuando}`;
 
 export async function guardarCopia() {
-  const r = await compartir(archivoCopia(), 'Copia de Registro de Ganado');
+  const ya = textoYa(), r = await compartir(ya !== null ? archivoDe(ya) : await archivoCopia(), 'Copia de Registro de Ganado');
   if (r === 'cancelado') return;
   marcarRespaldo(); render();
   avisar(r === 'compartido' ? '✅ Copia enviada' : '💾 Revise que la copia esté en Descargas');
@@ -18,15 +33,18 @@ export async function guardarCopia() {
 const MAX_COPIA = 20 * 2 ** 20;
 
 export function CopiaSeguridad() {
-  const juntar = (texto: string, que: string) => {
-    const esArchivo = que === 'Ese archivo';
+  const juntar = async (crudo: string, que: string) => {
+    const esArchivo = que === 'Ese archivo', grande = () => avisarError(`${que} es demasiado grande para ser una copia de esta app.`);
     // Una copia de verdad pesa unos KB; un archivo enorme colgaría la pantalla al leerlo.
-    if (texto.length > MAX_COPIA) return avisarError(`${que} es demasiado grande para ser una copia de esta app.`);
+    if (crudo.length > MAX_COPIA) return grande();
+    let texto: string;
+    try { texto = await leerCopia(crudo, MAX_COPIA) }
+    catch (err) { return err instanceof RangeError ? grande() : err instanceof SinSoporte ? avisarError(err.message + '.') : avisarError(esArchivo ? 'Ese archivo está incompleto o no es una copia de esta app. Pida que le manden la copia otra vez.' : 'Ese texto está cortado. Copie el mensaje completo y péguelo otra vez.') }
     if (est.ejemplo) verEjemplo(false); // una copia real nunca se junta con el ejemplo, que no se guarda
     let n;
     // Si el teléfono no puede guardar, se vuelve a como estaba: lo juntado no queda solo en memoria.
     const antes = JSON.stringify(est.db);
-    try { n = fusionar(est.db, JSON.parse(texto.trim())) }
+    try { n = fusionar(est.db, JSON.parse(texto)) }
     catch (err) {
       // Un texto que no es JSON trae un mensaje técnico del navegador: se dice en palabras simples.
       return avisarError(err instanceof SyntaxError
@@ -53,7 +71,7 @@ export function CopiaSeguridad() {
   };
   // Sin archivos: algunos teléfonos o navegadores internos no dejan descargar ni compartir archivos, pero sí texto.
   const enviarTexto = async () => {
-    const texto = JSON.stringify(est.db);
+    const texto = textoYa() ?? await textoDeCopia();
     try { await navigator.share({ text: texto }); marcarRespaldo(); render(); return avisar('✅ Copia enviada') }
     catch (e) { if ((e as Error).name === 'AbortError') return }
     try { await navigator.clipboard.writeText(texto); avisar('✅ Copia copiada: péguela en un mensaje') }
@@ -63,10 +81,10 @@ export function CopiaSeguridad() {
   return (
     <details open={!Object.keys(est.db.animales).length}>
       <summary>⚙️ Copia de seguridad</summary>
-      <p class="ayuda">Guarde una copia seguido para no perder sus datos si se daña o cambia de teléfono. También sirve para pasar todos los animales a otro teléfono por mensaje.</p>
+      <p class="ayuda">Guarde una copia seguido para no perder sus datos si se daña o cambia de teléfono. También sirve para pasar todos los animales a otro teléfono por mensaje. Si el otro teléfono no la puede abrir, que abra la app con internet para que se actualice.</p>
       <button class="grande" onClick={guardarCopia}>{textoCopia()}</button>
       {/* En el teléfono el botón de arriba abre el menú de compartir; este guarda el archivo en Descargas */}
-      {puedeCompartir(archivoCopia()) && <button class="grande" onClick={() => { descargar(archivoCopia(), archivoCopia().name); marcarRespaldo(); render(); avisar('💾 Revise que la copia esté en Descargas') }}>💾 Guardar la copia en este teléfono</button>}
+      {sePuedeCompartir() && <button class="grande" onClick={async () => { const ya = textoYa(), f = ya !== null ? archivoDe(ya) : await archivoCopia(); descargar(f, f.name); marcarRespaldo(); render(); avisar('💾 Revise que la copia esté en Descargas') }}>💾 Guardar la copia en este teléfono</button>}
       <button class="grande" onClick={() => archivo.click()}>📂 Recuperar una copia</button>
       <input ref={(el: HTMLInputElement) => (archivo = el)} type="file" accept=".json,.txt,.xlsx,application/json,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hide" onChange={recuperar} />
       {rescatados().map(k => <button class="grande" onClick={() => compartir(new File([localStorage.getItem(k) ?? ''], `ganado-rescatado-${k.slice((KEY + '.danado-').length)}.txt`, { type: 'text/plain' }), 'Datos rescatados')}>🛟 Guardar los datos rescatados</button>)}
