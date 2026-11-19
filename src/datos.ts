@@ -11,7 +11,7 @@ export type TipoEvento = keyof typeof EVENTOS;
 export const MOTIVOS = ['Venta', 'Muerte', 'Baja (desecho)'];
 export const CATEGORIAS = ['Vaca', 'Novilla / vaquilla', 'Ternera', 'Ternero', 'Novillo', 'Toro'];
 
-export interface Evento { id: string; tipo: TipoEvento; fecha: string; nota: string; motivo?: string; desde?: string; hacia?: string; am?: number; pm?: number } // am/pm: kilos de leche
+export interface Evento { id: string; tipo: TipoEvento; fecha: string; nota: string; motivo?: string; desde?: string; hacia?: string; am?: number; pm?: number; meses?: number } // am/pm: kilos de leche; meses: de preñez al confirmarla
 export interface Animal {
   arete: string; nombre: string; tipo: 'leche' | 'carne'; nac: string; finca: string;
   sexo: string; raza: string; categoria: string; notas: string; eventos: Evento[];
@@ -26,6 +26,8 @@ const RESERVADOS = new Set(['__proto__', 'constructor', 'prototype']);
 export const areteValido = (s: unknown): s is string => typeof s === 'string' && !!s.trim() && s.trim().length <= 40 && !RESERVADOS.has(s.trim());
 const esFecha = (s: unknown): s is string => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 const texto = (v: unknown, max: number) => typeof v === 'string' ? v.slice(0, max) : '';
+// Meses de preñez: de medio en medio (3,5), entre 0,5 y 9.
+export const mesesValidos = (v: unknown) => typeof v === 'number' && Number.isInteger(v * 2) && v >= 0.5 && v <= 9 ? v : undefined;
 const kilosValidos = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= MAX_KILOS ? v : undefined;
 
 // Campos que venían con algo y quedaron distintos: texto recortado, tipo raro o kilos imposibles.
@@ -39,13 +41,14 @@ export function limpiarEvento(e: any): Evento | null {
   if (e.hacia != null) ev.hacia = texto(e.hacia, 80);
   if (e.am != null) ev.am = kilosValidos(e.am);
   if (e.pm != null) ev.pm = kilosValidos(e.pm);
+  if (e.meses != null) ev.meses = mesesValidos(e.meses);
   return ev;
 }
 
 export function limpiarAnimal(a: any): { animal: Animal; descartados: number } | null {
   if (!a || typeof a !== 'object' || !areteValido(a.arete) || !Array.isArray(a.eventos)) return null;
   let cortados = 0;
-  const eventos = a.eventos.flatMap((o: any) => { const e = limpiarEvento(o); if (!e) return []; cortados += perdidos(o, e, ['nota', 'motivo', 'desde', 'hacia', 'am', 'pm']); return [e] });
+  const eventos = a.eventos.flatMap((o: any) => { const e = limpiarEvento(o); if (!e) return []; cortados += perdidos(o, e, ['nota', 'motivo', 'desde', 'hacia', 'am', 'pm', 'meses']); return [e] });
   const animal: Animal = {
     arete: a.arete.trim(), nombre: texto(a.nombre, 80), tipo: a.tipo === 'carne' ? 'carne' : 'leche', nac: esFecha(a.nac) ? a.nac : '',
     finca: texto(a.finca, 80), sexo: a.sexo === 'M' ? 'M' : 'H', raza: texto(a.raza, 80), categoria: texto(a.categoria, 40),
@@ -134,15 +137,20 @@ export const ordenados = (a: Animal) => [...a.eventos].sort((x, y) => x.fecha.lo
 export const retiro = (a: Animal) => a.eventos.find(e => e.tipo === 'retiro');
 export const fincas = (db: Db) => [...new Set(Object.values(db.animales).map(a => a.finca).filter(Boolean))].sort();
 
-// Gestación abierta: última monta/preñez sin parto, aborto ni celo posterior. Fecha base = la monta más reciente antes de esa preñez.
+// Gestación abierta: última monta/preñez sin parto, aborto ni celo posterior. Fecha base = la monta más reciente antes de esa preñez,
+// salvo que la preñez diga de cuántos meses está: eso manda (lo dijo el veterinario).
 function baseAbierta(eventos: Evento[]) {
-  let base: string | null = null;
+  return gestacion(eventos)?.base ?? null;
+}
+function gestacion(eventos: Evento[]) {
+  let base: string | null = null, porMeses = false;
   for (const e of eventos) {
-    if (e.tipo === 'monta') base = e.fecha;
+    if (e.tipo === 'monta') { base = e.fecha; porMeses = false }
+    else if (e.tipo === 'prenez' && e.meses) { base = sumarDias(e.fecha, -Math.round(e.meses * 30.4)); porMeses = true }
     else if (e.tipo === 'prenez' && !base) base = e.fecha;
-    else if (e.tipo === 'parto' || e.tipo === 'aborto' || e.tipo === 'celo') base = null; // volver a celo anula la preñez
+    else if (e.tipo === 'parto' || e.tipo === 'aborto' || e.tipo === 'celo') { base = null; porMeses = false } // volver a celo anula la preñez
   }
-  return base;
+  return base ? { base, porMeses } : null;
 }
 // Celo de una vaca que estaba preñada: es una repetición y anuló esa preñez.
 export function esRepeticion(a: Animal, e: Evento) {
@@ -150,10 +158,10 @@ export function esRepeticion(a: Animal, e: Evento) {
   return e.tipo === 'celo' && a.sexo !== 'M' && !!baseAbierta(o.slice(0, o.indexOf(e)));
 }
 export function prenezAbierta(a: Animal) {
-  const base = a.sexo === 'M' ? null : baseAbierta(ordenados(a));
-  if (!base) return null;
-  const parto = sumarDias(base, GESTACION);
-  return { parto, secado: a.tipo === 'leche' ? sumarDias(parto, -SECADO_ANTES) : null };
+  const g = a.sexo === 'M' ? null : gestacion(ordenados(a));
+  if (!g) return null;
+  const parto = sumarDias(g.base, GESTACION);
+  return { parto, secado: a.tipo === 'leche' ? sumarDias(parto, -SECADO_ANTES) : null, ...(g.porMeses && { porMeses: true }) };
 }
 
 export function alertas(db: Db, desde = hoy()) {
@@ -192,7 +200,8 @@ export const ultimoPesaje = (a: Animal) => ultimo(a, 'pesaje');
 // Cómo se nombra un evento en pantalla.
 export const textoEvento = (e: Evento, a: Animal) => esRepeticion(a, e) ? 'Celo (repetición: se anuló la preñez)' : e.tipo === 'retiro' ? 'Salida: ' + e.motivo
   : e.tipo === 'traslado' ? `Traslado: ${e.desde || '—'} → ${e.hacia}`
-  : e.tipo === 'pesaje' ? `Pesaje: ${kilos(totalPesaje(e))}` : EVENTOS[e.tipo];
+  : e.tipo === 'pesaje' ? `Pesaje: ${kilos(totalPesaje(e))}`
+  : e.tipo === 'prenez' && e.meses ? `${EVENTOS.prenez} (${String(e.meses).replace('.', ',')} ${e.meses === 1 ? 'mes' : 'meses'})` : EVENTOS[e.tipo];
 // Último evento de manejo (los pesajes van aparte).
 export const ultimoEvento = (a: Animal) => ordenados(a).filter(e => e.tipo !== 'pesaje').pop();
 // "hoy", "ayer", "hace 5 días", "en 3 días".

@@ -1,5 +1,5 @@
 import { h } from '../jsx';
-import { Animal, CAMPOS, CATEGORIAS, areteValido, esRepeticion, juntar, nombreA, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, hoy, kilos, nuevoId, ordenados, pesajeDe, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
+import { Animal, CAMPOS, Evento, mesesValidos, CATEGORIAS, areteValido, esRepeticion, juntar, nombreA, EVENTOS, MOTIVOS, TipoEvento, fincas, fmt, hoy, kilos, nuevoId, ordenados, pesajeDe, prenezAbierta, retiro, textoEvento, totalPesaje, trasladar, ultimoPesaje } from '../datos';
 import { abrir, avisarError, errorCampo, est, guardarYAvisar, ir, mostrarReporte, render, volver } from '../estado';
 import { EliminarAnimal } from '../componentes/EliminarDatos';
 import { NombreYArete } from '../componentes/Arete';
@@ -81,11 +81,12 @@ const OTROS: [TipoEvento, string, string?][] = [
 ];
 
 function NuevoEvento({ a }: { a: Animal }) {
-  let tipo!: HTMLInputElement, motivo!: HTMLInputElement, otroBox!: HTMLElement, form!: HTMLElement, destinoBox!: HTMLElement, guardarBtn!: HTMLElement;
+  let tipo!: HTMLInputElement, motivo!: HTMLInputElement, otroBox!: HTMLElement, form!: HTMLElement, destinoBox!: HTMLElement, mesesBox!: HTMLElement, guardarBtn!: HTMLElement;
   const elegir = (t: string, m: string, boton: HTMLElement) => {
     tipo.value = t; motivo.value = m; document.getElementById('f-que-error')?.replaceChildren();
     for (const b of form.querySelectorAll('.eventos button')) b.setAttribute('aria-pressed', String(b === boton));
     destinoBox.classList.toggle('hide', t !== 'traslado');
+    mesesBox.classList.toggle('hide', t !== 'prenez');
     // Una salida saca al animal de la lista: el botón lo dice claro (en lugar de una ventanita de confirmación).
     guardarBtn.textContent = t === 'retiro' ? `💾 Guardar: ${m} (ya no saldrá en la lista)` : '💾 Guardar lo que pasó';
     guardarBtn.classList.toggle('peligro', t === 'retiro');
@@ -103,8 +104,13 @@ function NuevoEvento({ a }: { a: Animal }) {
     const ev = { id: nuevoId(), tipo: tipo.value as TipoEvento, fecha: val('fecha'), nota: val('nota'), motivo: undefined as string | undefined };
     if (ev.tipo === 'retiro') ev.motivo = motivo.value;
     else delete ev.motivo;
+    if (ev.tipo === 'prenez' && val('meses')) {
+      const meses = mesesValidos(Number(val('meses').replace(',', '.')));
+      if (!meses) return errorCampo(f.elements.namedItem('meses') as HTMLInputElement, 'Escriba los meses con un número del 0,5 al 9 (puede ser con media, como 3,5), o deje el cuadro vacío.');
+      (ev as Evento).meses = meses;
+    }
     if (ev.tipo === 'parto') est.criaDe = a.arete;
-    a.eventos.push(ev); render(); guardarYAvisar('✅ Guardado: ' + (esRepeticion(a, ev) ? 'Celo (repetición)' : ev.motivo ?? EVENTOS[ev.tipo]));
+    a.eventos.push(ev); render(); guardarYAvisar('✅ Guardado: ' + (esRepeticion(a, ev) ? 'Celo (repetición)' : ev.motivo ?? textoEvento(ev, a)));
   };
   return (
     <form class="card" onSubmit={enviar} ref={(el: HTMLElement) => (form = el)}>
@@ -125,6 +131,11 @@ function NuevoEvento({ a }: { a: Animal }) {
         <label for="f-destino">¿A qué finca pasó? (ahora está en {a.finca || 'ninguna'})</label>
         <input id="f-destino" name="destino" maxlength="80" list="listaDestinos" />
         <datalist id="listaDestinos">{fincas(est.db).filter(f => f !== a.finca).map(f => <option value={f} />)}</datalist>
+      </div>
+      <div class="hide" ref={(el: HTMLElement) => (mesesBox = el)}>
+        <label for="f-meses">¿De cuántos meses está? (si lo sabe)</label>
+        <input id="f-meses" name="meses" inputmode="decimal" maxlength="3" placeholder="Ej.: 3 o 3,5" />
+        <p class="ayuda">Con esto se calcula el parto, aunque haya una monta anotada.</p>
       </div>
       <label for="f-fecha">Fecha</label>
       <input id="f-fecha" name="fecha" type="date" required value={hoy()} />
@@ -213,7 +224,7 @@ export function Ficha() {
         <h2 class="titulo-animal">🐄 <NombreYArete nombre={a.nombre} arete={a.arete} /></h2>
         <p class="mut">{[a.finca, a.categoria, a.raza, a.tipo === 'leche' ? 'Leche' : 'Carne'].filter(Boolean).join(' · ')}</p>
         {r ? <p class="bad"><b>Salió: {r.motivo} el {fmt(r.fecha)}</b></p>
-          : p ? <p class="warn"><b>Preñada · parto probable {fmt(p.parto)}{p.secado ? ' · secar el ' + fmt(p.secado) : ''}</b></p> : null}
+          : p ? <p class="warn"><b>Preñada · parto probable {fmt(p.parto)}{p.porMeses ? ' (según los meses al confirmar)' : ''}{p.secado ? ' · secar el ' + fmt(p.secado) : ''}</b></p> : null}
         {ultimoPesaje(a) && <p>🥛 Último pesaje: <b>{kilos(totalPesaje(ultimoPesaje(a)!))}</b> el {fmt(ultimoPesaje(a)!.fecha)}</p>}
       </div>
       {est.criaDe === a.arete && <div class="card">

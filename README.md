@@ -36,7 +36,7 @@ Si el teléfono pregunta si el navegador puede agregar íconos, toque **Permitir
 
 - Registro por número de arete, nombre, finca, raza, sexo y categoría.
 - Eventos fechados: celo, monta o inseminación, preñez, parto, aborto, destete, secado y salida (venta, muerte o baja).
-- Avisos de fecha probable de parto (monta + 283 días) y de secado (60 días antes del parto, en ganado de leche).
+- Avisos de fecha probable de parto (monta + 283 días, o desde los meses de preñez que diga el veterinario) y de secado (60 días antes del parto, en ganado de leche).
 - Pesaje de leche de mañana y tarde por finca, con aviso de números raros.
 - Traslados de uno o varios animales entre fincas, con historial.
 - Reportes por finca, partos y secados, salidas, traslados y pesajes: se envían como foto o se guardan en PDF.
