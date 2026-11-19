@@ -92,6 +92,7 @@ interface Evento {
   motivo?: string;          // retiro: 'Venta' | 'Muerte' | 'Baja (desecho)'
   desde?: string; hacia?: string;  // traslado
   am?: number; pm?: number;        // pesaje, en kg
+  meses?: number;                  // prenez: meses al confirmarla (0,5 a 9, en medios meses)
 }
 ```
 
@@ -101,7 +102,7 @@ Otras claves: `ganado.v1.respaldo` (fecha de la última copia enviada o guardada
 
 ### Reglas del hato (`datos.ts`)
 
-- **Parto probable:** última monta + `GESTACION` (283 días). Si no hay monta, se usa la preñez confirmada. Un parto, aborto o celo posterior cierra la preñez (`prenezAbierta`); ese celo se muestra como repetición (`esRepeticion`). Los machos nunca tienen preñez.
+- **Parto probable:** última monta + `GESTACION` (283 días). Si no hay monta, se usa la preñez confirmada. Si la preñez trae `meses` (0,5 a 9, en medios meses, `mesesValidos`), la base es su fecha − `meses × 30,4` días y manda sobre la monta anterior; una monta anotada después vuelve a mandar. Un parto, aborto o celo posterior cierra la preñez (`prenezAbierta`); ese celo se muestra como repetición (`esRepeticion`). Los machos nunca tienen preñez.
 - **Secado:** parto probable − `SECADO_ANTES` (60 días), solo en vacas de leche. **Seca:** último secado posterior al último parto (`estaSeca`).
 - **Avisos:** partos y secados a 30 días o menos (`alertas`).
 - **Pesaje:** un evento por vaca y día (`guardarPesajes` reemplaza). `leerKilos` acepta coma, rechaza más de `MAX_KILOS` (60) por ordeño. `esRaro`: más del doble o menos de la mitad que la vez anterior.

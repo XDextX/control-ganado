@@ -34,6 +34,27 @@ describe('fechas del hato', () => {
     expect(prenezAbierta(vaca('leche', [{ id: 'a', tipo: 'monta', fecha: '2026-01-01', nota: '' }]))).toEqual({ parto: '2026-10-11', secado: '2026-08-12' });
     expect(prenezAbierta(vaca('carne', [{ id: 'a', tipo: 'monta', fecha: '2026-01-01', nota: '' }]))!.secado).toBeNull();
   });
+  it('los meses de la preñez confirmada mandan sobre la monta', () => {
+    const p = { id: 'b', tipo: 'prenez' as const, fecha: '2026-04-02', nota: '', meses: 3 };
+    expect(prenezAbierta(vaca('carne', [{ id: 'a', tipo: 'monta', fecha: '2026-02-20', nota: '' }, p]))!.parto).toBe('2026-10-11');
+    expect(textoEvento(p, vaca('carne', [p]))).toBe('Preñez confirmada (3 meses)');
+    expect(prenezAbierta(vaca('carne', [p]))!.porMeses).toBe(true);
+    const media = { ...p, meses: 3.5 };
+    expect(textoEvento(media, vaca('carne', [media]))).toBe('Preñez confirmada (3,5 meses)');
+    expect(limpiarAnimal({ arete: '999000000001', eventos: [media] })!.animal.eventos[0].meses).toBe(3.5);
+    expect(limpiarAnimal({ arete: '999000000001', eventos: [{ ...p, meses: 3.3 }] })!.animal.eventos[0].meses).toBeUndefined();
+    expect(limpiarAnimal({ arete: '999000000001', eventos: [{ ...p, meses: 9.5 }] })!.animal.eventos[0].meses).toBeUndefined();
+    expect(limpiarAnimal({ arete: '999000000001', eventos: [{ ...p, meses: 9 }] })!.animal.eventos[0].meses).toBe(9);
+    // Una segunda preñez sin meses no borra la fecha que dieron los meses.
+    expect(prenezAbierta(vaca('carne', [p, { id: 'c', tipo: 'prenez', fecha: '2026-05-01', nota: '' }]))!.parto).toBe('2026-10-11');
+    // Tras un parto o un celo, una preñez nueva sin meses ya no cuenta desde los meses viejos.
+    for (const cierre of ['parto', 'celo'] as const)
+      expect(prenezAbierta(vaca('carne', [p, { id: 'c', tipo: cierre, fecha: '2026-06-01', nota: '' }, { id: 'd', tipo: 'prenez', fecha: '2026-09-01', nota: '' }]))!.porMeses).toBeUndefined();
+    // Decisión del dueño: una monta anotada después vuelve a mandar, también el mismo día.
+    expect(prenezAbierta(vaca('carne', [p, { id: 'c', tipo: 'monta', fecha: '2026-05-01', nota: '' }]))).toMatchObject({ parto: sumarDias('2026-05-01', 283) });
+    expect(prenezAbierta(vaca('carne', [p, { id: 'c', tipo: 'monta', fecha: '2026-04-02', nota: '' }]))!.porMeses).toBeUndefined();
+    expect(limpiarAnimal({ arete: '999000000001', eventos: [{ ...p, meses: 12 }] })!.animal.eventos[0].meses).toBeUndefined();
+  });
   it('el parto o el aborto cierran la preñez', () => {
     expect(prenezAbierta(vaca('carne', [
       { id: 'a', tipo: 'monta', fecha: '2026-01-01', nota: '' }, { id: 'b', tipo: 'parto', fecha: '2026-10-10', nota: '' }]))).toBeNull();
